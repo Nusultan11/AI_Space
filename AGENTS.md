@@ -41,6 +41,18 @@
 - Formatting, lint, type checks, relevant tests, builds, and `git diff --check` pass; Docker is verified when affected.
 - The diff is focused and reviewed, then committed with a logical Conventional Commit only after verification succeeds.
 
+## Completion report
+
+After every meaningful implementation task or project phase—not after every tiny edit—provide a compact, result-oriented report, normally 5–12 lines, using exactly this structure:
+
+1. **Completed:** State what was created, changed, fixed, or implemented and the concrete result achieved. Mention important affected areas or files when useful, and include the commit hash if a required commit was created.
+2. **Verification:** List only checks actually executed and their real results, including relevant tests, lint, type checks, builds, migrations, Docker/Compose validation, E2E, Git diff, or Git status.
+3. **Issues / limitations:** State remaining failures, blockers, environment problems, assumptions, deferred items, and skipped or unavailable checks. Write `None` when there are none.
+4. **Current state:** Use exactly one of `DONE`, `PARTIAL`, or `BLOCKED`, with a brief reason. `DONE` requires all required work and verification to pass; use `PARTIAL` when work is implemented but required verification or scope remains, and `BLOCKED` when progress requires an unavailable external dependency or user action. Clearly distinguish implemented work from verified work.
+5. **Next action:** State the exact next phase, task, or prompt to execute; do not begin it automatically.
+
+Describe outcomes rather than every command. Avoid vague phrases such as “updated code” or “made improvements,” and omit raw logs unless they explain a failure. Explicitly report failed, skipped, or environment-blocked verification; never claim an unexecuted check passed or mark the task `DONE` while required verification is failing or missing.
+
 ## Explicit non-goals
 
 - No LangChain, LangGraph, microservices, Redis, Celery, Kafka, RabbitMQ, Kubernetes, Terraform, vector database, RAG, WebSockets, admin/RBAC system, or analytics platform without a concrete requirement.

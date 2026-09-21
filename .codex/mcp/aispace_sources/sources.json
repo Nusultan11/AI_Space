@@ -1,0 +1,335 @@
+{
+  "schema_version": 1,
+  "sources": [
+    {
+      "id": "pg_range_types",
+      "title": "PostgreSQL Range Types",
+      "url": "https://www.postgresql.org/docs/current/rangetypes.html",
+      "category": "database",
+      "tags": ["postgresql", "range", "tstzrange", "gist", "overlap", "half-open"],
+      "summary": "Official PostgreSQL reference for range and multirange types, bounds, operators, indexes, and exclusion constraints.",
+      "project_relevance": "Defines the tstzrange and [start, end) semantics used to represent booking intervals and detect overlaps.",
+      "key_points": ["Use explicit [) bounds for adjacent bookings.", "The && operator detects range overlap.", "GiST indexes support efficient range operators."]
+    },
+    {
+      "id": "pg_constraints",
+      "title": "PostgreSQL Constraints",
+      "url": "https://www.postgresql.org/docs/current/ddl-constraints.html",
+      "category": "database",
+      "tags": ["postgresql", "constraints", "exclusion", "overlap", "check", "foreign-key", "integrity"],
+      "summary": "Official PostgreSQL reference for check, unique, primary-key, foreign-key, and exclusion constraints.",
+      "project_relevance": "Supports end-after-start checks, referential integrity, and database-level exclusion of overlapping confirmed bookings.",
+      "key_points": ["Constraints enforce invariants independently of application races.", "Exclusion constraints compare candidate rows with existing rows.", "Name constraints so integrity errors can be translated safely."]
+    },
+    {
+      "id": "pg_btree_gist",
+      "title": "PostgreSQL btree_gist",
+      "url": "https://www.postgresql.org/docs/current/btree-gist.html",
+      "category": "database",
+      "tags": ["postgresql", "btree_gist", "gist", "uuid", "equality", "exclusion"],
+      "summary": "Official reference for GiST operator classes that provide B-tree-like behavior for data types used in multicolumn GiST indexes.",
+      "project_relevance": "Enables equality on room_id alongside tstzrange overlap in the booking exclusion constraint.",
+      "key_points": ["Install the extension through a migration.", "Combine scalar equality with range overlap in one GiST exclusion constraint.", "Treat extension availability as a PostgreSQL integration concern."]
+    },
+    {
+      "id": "pg_transaction_isolation",
+      "title": "PostgreSQL Transaction Isolation",
+      "url": "https://www.postgresql.org/docs/current/transaction-iso.html",
+      "category": "database",
+      "tags": ["postgresql", "transaction", "isolation", "concurrency", "race-condition", "rollback"],
+      "summary": "Official PostgreSQL guide to transaction isolation levels, serialization behavior, and concurrency anomalies.",
+      "project_relevance": "Explains why a pre-check alone cannot prevent concurrent double booking and why constraint failures require rollback.",
+      "key_points": ["Concurrent transactions can observe changing data depending on isolation.", "Correctness must survive races between pre-check and insert.", "Retry or error handling must respect transaction state."]
+    },
+    {
+      "id": "pg_datetime",
+      "title": "PostgreSQL Date/Time Types",
+      "url": "https://www.postgresql.org/docs/current/datatype-datetime.html",
+      "category": "database",
+      "tags": ["postgresql", "datetime", "timestamptz", "timezone", "utc", "timestamp"],
+      "summary": "Official PostgreSQL reference for date/time types, input, output, time zones, and timestamp behavior.",
+      "project_relevance": "Guides storage of booking instants as TIMESTAMPTZ while office-local interpretation remains explicit at system boundaries.",
+      "key_points": ["Use timestamp with time zone for booking instants.", "Require timezone-aware API inputs.", "Separate stored instants from local display and natural-language interpretation."]
+    },
+    {
+      "id": "fastapi",
+      "title": "FastAPI Documentation",
+      "url": "https://fastapi.tiangolo.com/",
+      "category": "backend",
+      "tags": ["fastapi", "api", "dependency-injection", "openapi", "async", "errors"],
+      "summary": "Official FastAPI documentation for typed HTTP APIs, dependencies, validation integration, errors, and async endpoints.",
+      "project_relevance": "Supports the /api/v1 contract, authentication dependencies, consistent errors, and thin router boundaries.",
+      "key_points": ["Keep HTTP adaptation in routers and domain rules in services.", "Use dependencies for request-scoped authentication and sessions.", "Expose typed request and response contracts."]
+    },
+    {
+      "id": "pydantic",
+      "title": "Pydantic Documentation",
+      "url": "https://docs.pydantic.dev/latest/",
+      "category": "backend",
+      "tags": ["pydantic", "validation", "schema", "settings", "booking-intent", "untrusted-input"],
+      "summary": "Official Pydantic documentation for typed models, validation, serialization, and settings patterns.",
+      "project_relevance": "Defines API schemas and validates untrusted DeepSeek JSON before separate business validation.",
+      "key_points": ["Schema validity is not the same as domain validity.", "Reject or clarify missing critical BookingIntent fields.", "Use strict, explicit models at trust boundaries."]
+    },
+    {
+      "id": "sqlalchemy_asyncio",
+      "title": "SQLAlchemy AsyncIO",
+      "url": "https://docs.sqlalchemy.org/en/20/orm/extensions/asyncio.html",
+      "category": "backend",
+      "tags": ["sqlalchemy", "asyncio", "asyncsession", "transaction", "orm", "postgresql"],
+      "summary": "Official SQLAlchemy 2 documentation for asyncio engines, AsyncSession lifecycle, transactions, and ORM use.",
+      "project_relevance": "Guides request-scoped database sessions, BookingService transactions, rollback, and concurrency-safe persistence.",
+      "key_points": ["Do not share one AsyncSession across concurrent tasks.", "Keep transaction ownership explicit.", "Rollback after integrity errors before reusing a session."]
+    },
+    {
+      "id": "alembic",
+      "title": "Alembic Documentation",
+      "url": "https://alembic.sqlalchemy.org/en/latest/",
+      "category": "backend",
+      "tags": ["alembic", "migration", "schema", "postgresql", "constraint", "extension"],
+      "summary": "Official Alembic documentation for database schema migrations with SQLAlchemy.",
+      "project_relevance": "Owns reproducible creation of tables, btree_gist, booking constraints, and forward/backward schema evolution.",
+      "key_points": ["Review generated migrations before applying them.", "Use explicit operations for PostgreSQL-specific extensions and exclusion constraints.", "Test upgrade paths on an empty real PostgreSQL database."]
+    },
+    {
+      "id": "jwt_rfc7519",
+      "title": "JSON Web Token (JWT) RFC 7519",
+      "url": "https://datatracker.ietf.org/doc/html/rfc7519",
+      "category": "security",
+      "tags": ["jwt", "rfc7519", "claims", "expiration", "bearer", "authentication"],
+      "summary": "The standards-track definition of JSON Web Tokens and registered claim names.",
+      "project_relevance": "Provides the token format used for short-lived access tokens while authorization remains enforced by backend ownership checks.",
+      "key_points": ["Validate signature and required claims.", "Use expiration deliberately.", "A valid token does not replace resource authorization."]
+    },
+    {
+      "id": "owasp_authentication",
+      "title": "OWASP Authentication Cheat Sheet",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html",
+      "category": "security",
+      "tags": ["owasp", "authentication", "login", "password", "errors", "session"],
+      "summary": "OWASP guidance for designing and implementing secure authentication controls.",
+      "project_relevance": "Guides registration/login behavior, credential handling, authentication errors, and abuse-resistant defaults.",
+      "key_points": ["Use consistent authentication responses where disclosure matters.", "Protect authentication data in transit and logs.", "Treat inactive users and failed credentials deliberately."]
+    },
+    {
+      "id": "owasp_password_storage",
+      "title": "OWASP Password Storage Cheat Sheet",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html",
+      "category": "security",
+      "tags": ["owasp", "password", "argon2", "hashing", "salt", "credential"],
+      "summary": "OWASP guidance for modern password hashing algorithms and operational parameters.",
+      "project_relevance": "Supports the required pwdlib/Argon2 password storage design and prohibits reversible or plaintext credential storage.",
+      "key_points": ["Prefer Argon2id where available.", "Store password hashes, never plaintext passwords.", "Choose and revisit work factors deliberately."]
+    },
+    {
+      "id": "owasp_rest_security",
+      "title": "OWASP REST Security Cheat Sheet",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/REST_Security_Cheat_Sheet.html",
+      "category": "security",
+      "tags": ["owasp", "rest", "authorization", "jwt", "input-validation", "logging"],
+      "summary": "OWASP guidance for REST API authentication, authorization, input validation, status codes, and operational security.",
+      "project_relevance": "Guides authorization for booking ownership, safe error responses, input validation, and sensitive-log avoidance.",
+      "key_points": ["Authorize every protected operation server-side.", "Validate all untrusted input.", "Do not expose secrets or internal details in errors and logs."]
+    },
+    {
+      "id": "deepseek_api",
+      "title": "DeepSeek API Documentation",
+      "url": "https://api-docs.deepseek.com/",
+      "category": "llm",
+      "tags": ["deepseek", "llm", "api", "timeout", "rate-limit", "errors"],
+      "summary": "Official DeepSeek API documentation for request formats, models, endpoints, and API behavior.",
+      "project_relevance": "Defines the external parser integration that converts natural language into a BookingIntent preview only.",
+      "key_points": ["Keep API configuration outside source control.", "Bound calls with timeouts.", "Map provider failures without breaking manual booking."]
+    },
+    {
+      "id": "deepseek_json_output",
+      "title": "DeepSeek JSON Output",
+      "url": "https://api-docs.deepseek.com/guides/json_mode",
+      "category": "llm",
+      "tags": ["deepseek", "json", "structured-output", "booking-intent", "validation", "clarification"],
+      "summary": "Official DeepSeek guide for requesting JSON-formatted model output and handling its constraints.",
+      "project_relevance": "Supports structured BookingIntent extraction while requiring JSON parsing, Pydantic validation, and domain validation afterward.",
+      "key_points": ["A JSON response is still untrusted input.", "Handle empty or malformed output.", "Prompt for the expected shape and validate every field."]
+    },
+    {
+      "id": "openai_python",
+      "title": "OpenAI Python SDK",
+      "url": "https://github.com/openai/openai-python",
+      "category": "llm",
+      "tags": ["openai", "python", "client", "timeout", "retry", "async"],
+      "summary": "Official repository and usage documentation for the OpenAI Python client library.",
+      "project_relevance": "If used with DeepSeek's compatible API, provides client mechanics; DeepSeek-specific behavior remains governed by DeepSeek documentation.",
+      "key_points": ["Configure base URL and credentials explicitly.", "Set bounded timeout and failure handling.", "Hide the concrete client behind BookingIntentParser."]
+    },
+    {
+      "id": "react",
+      "title": "React Documentation",
+      "url": "https://react.dev/",
+      "category": "frontend",
+      "tags": ["react", "components", "state", "forms", "ui", "effects"],
+      "summary": "Official React documentation for components, state, effects, rendering, and application composition.",
+      "project_relevance": "Supports a clear component model for authentication, room schedules, booking forms, previews, and result states.",
+      "key_points": ["Keep rendering deterministic.", "Avoid duplicating server-derived state in effects.", "Separate interaction state from server state."]
+    },
+    {
+      "id": "typescript",
+      "title": "TypeScript Documentation",
+      "url": "https://www.typescriptlang.org/docs/",
+      "category": "frontend",
+      "tags": ["typescript", "types", "contracts", "narrowing", "frontend"],
+      "summary": "Official TypeScript documentation for static types, narrowing, modules, and compiler behavior.",
+      "project_relevance": "Provides compile-time contracts for API payloads, UI states, and booking-preview flows.",
+      "key_points": ["Model loading, success, empty, and error states explicitly.", "Do not use frontend types as runtime validation.", "Keep API contract types aligned with backend schemas."]
+    },
+    {
+      "id": "vite",
+      "title": "Vite Guide",
+      "url": "https://vite.dev/guide/",
+      "category": "frontend",
+      "tags": ["vite", "build", "environment", "development", "frontend"],
+      "summary": "Official Vite guide for local development, environment variables, static builds, and plugins.",
+      "project_relevance": "Defines the frontend development and production build that Nginx serves in the composed runtime.",
+      "key_points": ["Only explicitly exposed client variables reach browser code.", "Build static assets for Nginx.", "Keep the browser API base path on the single-origin /api route."]
+    },
+    {
+      "id": "mui",
+      "title": "Material UI Documentation",
+      "url": "https://mui.com/material-ui/getting-started/",
+      "category": "frontend",
+      "tags": ["mui", "material-ui", "components", "accessibility", "forms", "feedback"],
+      "summary": "Official Material UI documentation for React UI components, theming, form controls, and feedback patterns.",
+      "project_relevance": "Supports an accessible functional interface for forms, previews, conflicts, alternatives, and status feedback.",
+      "key_points": ["Use semantic labels and accessible controls.", "Represent loading and errors visibly.", "Favor standard components over custom decoration."]
+    },
+    {
+      "id": "tanstack_query",
+      "title": "TanStack Query for React",
+      "url": "https://tanstack.com/query/latest/docs/framework/react/overview",
+      "category": "frontend",
+      "tags": ["tanstack-query", "server-state", "cache", "invalidation", "mutation", "react"],
+      "summary": "Official TanStack Query overview for fetching, caching, synchronizing, and mutating server state in React.",
+      "project_relevance": "Owns room, schedule, availability, and booking server state plus invalidation after create or cancel.",
+      "key_points": ["Invalidate affected queries after successful mutations.", "Keep server state out of ad hoc global state.", "Show pending and error states from query lifecycle."]
+    },
+    {
+      "id": "react_hook_form",
+      "title": "React Hook Form Documentation",
+      "url": "https://react-hook-form.com/",
+      "category": "frontend",
+      "tags": ["react-hook-form", "forms", "validation", "booking", "typescript"],
+      "summary": "Official React Hook Form documentation for managing form state, validation, submission, and errors.",
+      "project_relevance": "Supports login, registration, manual booking, and editable AI preview forms without moving business rules into the browser.",
+      "key_points": ["Keep client validation focused on fast feedback.", "Display backend field and domain errors.", "Preserve user input across recoverable failures."]
+    },
+    {
+      "id": "zod",
+      "title": "Zod Documentation",
+      "url": "https://zod.dev/",
+      "category": "frontend",
+      "tags": ["zod", "schema", "validation", "typescript", "forms", "runtime"],
+      "summary": "Official Zod documentation for TypeScript-first runtime schemas and parsing.",
+      "project_relevance": "Validates browser form and API-response shapes while backend validation remains authoritative.",
+      "key_points": ["Use runtime parsing where external data enters the frontend.", "Infer TypeScript types from schemas where helpful.", "Do not duplicate backend domain decisions."]
+    },
+    {
+      "id": "pytest",
+      "title": "pytest Documentation",
+      "url": "https://docs.pytest.org/",
+      "category": "testing",
+      "tags": ["pytest", "fixtures", "parametrize", "unit-test", "integration-test"],
+      "summary": "Official pytest documentation for test discovery, fixtures, parametrization, assertions, and plugins.",
+      "project_relevance": "Provides the backend test harness for domain rules, APIs, migrations, concurrency, and mocked parser behavior.",
+      "key_points": ["Parametrize booking interval boundaries.", "Use fixtures with explicit lifecycle.", "Keep failure assertions specific to behavior."]
+    },
+    {
+      "id": "testcontainers_python",
+      "title": "Testcontainers for Python",
+      "url": "https://testcontainers-python.readthedocs.io/",
+      "category": "testing",
+      "tags": ["testcontainers", "postgresql", "integration-test", "docker", "migration", "concurrency"],
+      "summary": "Testcontainers for Python documentation for disposable container-backed integration dependencies.",
+      "project_relevance": "Enables tests against real PostgreSQL for exclusion constraints, migrations, and concurrent booking races.",
+      "key_points": ["Do not substitute SQLite for PostgreSQL behavior.", "Apply migrations to the test database.", "Make container lifecycle deterministic and isolated."]
+    },
+    {
+      "id": "playwright",
+      "title": "Playwright Documentation",
+      "url": "https://playwright.dev/docs/intro",
+      "category": "testing",
+      "tags": ["playwright", "e2e", "browser", "web", "booking-flow", "testing"],
+      "summary": "Official Playwright documentation for reliable browser automation and end-to-end testing.",
+      "project_relevance": "Covers manual booking/conflict and AI preview/confirm user journeys through the composed application.",
+      "key_points": ["Prefer user-visible locators and outcomes.", "Keep E2E focused on critical cross-layer flows.", "Capture useful traces for failures without exposing secrets."]
+    },
+    {
+      "id": "docker_compose",
+      "title": "Docker Compose Documentation",
+      "url": "https://docs.docker.com/compose/",
+      "category": "devops",
+      "tags": ["docker", "compose", "healthcheck", "depends-on", "environment", "startup"],
+      "summary": "Official Docker Compose documentation for defining and running multi-container applications.",
+      "project_relevance": "Defines one-command startup for PostgreSQL, migrations, seed, backend, and Nginx-served frontend.",
+      "key_points": ["Use healthchecks and dependency conditions deliberately.", "Keep secrets outside committed Compose defaults.", "Verify startup from a clean state."]
+    },
+    {
+      "id": "nginx_reverse_proxy",
+      "title": "NGINX Reverse Proxy Guide",
+      "url": "https://docs.nginx.com/nginx/admin-guide/web-server/reverse-proxy/",
+      "category": "devops",
+      "tags": ["nginx", "reverse-proxy", "spa", "api", "headers", "single-origin"],
+      "summary": "Official NGINX guide for proxying requests and forwarding request metadata to upstream services.",
+      "project_relevance": "Supports serving the SPA and proxying /api to FastAPI through one browser origin.",
+      "key_points": ["Forward required proxy headers explicitly.", "Keep API and static-route behavior unambiguous.", "Test SPA fallback separately from API routing."]
+    },
+    {
+      "id": "ruff",
+      "title": "Ruff Documentation",
+      "url": "https://docs.astral.sh/ruff/",
+      "category": "devops",
+      "tags": ["ruff", "lint", "format", "python", "quality", "ci"],
+      "summary": "Official Ruff documentation for Python linting, formatting, configuration, and editor/CI use.",
+      "project_relevance": "Provides fast, reproducible backend formatting and lint gates locally and in CI.",
+      "key_points": ["Keep local and CI configuration identical.", "Run format checks and lint checks explicitly.", "Fix findings rather than broadly suppressing them."]
+    },
+    {
+      "id": "pyright",
+      "title": "Pyright Documentation",
+      "url": "https://microsoft.github.io/pyright/",
+      "category": "devops",
+      "tags": ["pyright", "typing", "python", "static-analysis", "quality", "ci"],
+      "summary": "Official Pyright documentation for Python static type checking and configuration.",
+      "project_relevance": "Checks typed API, service, repository, and parser contracts before runtime.",
+      "key_points": ["Type trust-boundary models precisely.", "Keep async return and optional types explicit.", "Do not hide real errors with blanket ignores."]
+    },
+    {
+      "id": "github_actions",
+      "title": "GitHub Actions Documentation",
+      "url": "https://docs.github.com/actions",
+      "category": "devops",
+      "tags": ["github-actions", "ci", "workflow", "secrets", "postgresql", "build"],
+      "summary": "Official GitHub documentation for workflows, jobs, actions, environments, and secrets.",
+      "project_relevance": "Runs backend, frontend, PostgreSQL integration, E2E where practical, and Docker build gates.",
+      "key_points": ["Use least-privilege workflow permissions.", "Keep secrets in supported secret stores.", "Make CI commands match documented local gates."]
+    },
+    {
+      "id": "twelve_factor_config",
+      "title": "The Twelve-Factor App: Config",
+      "url": "https://12factor.net/config",
+      "category": "devops",
+      "tags": ["twelve-factor", "config", "environment", "secrets", "deployment"],
+      "summary": "The Twelve-Factor App guidance for separating deploy-varying configuration from code.",
+      "project_relevance": "Supports environment-based database, JWT, timezone, and DeepSeek settings without committed credentials.",
+      "key_points": ["Keep deploy-specific values out of source code.", "Document required variables in .env.example.", "Do not group sensitive production values into committed profiles."]
+    },
+    {
+      "id": "google_sre_book",
+      "title": "Google Site Reliability Engineering Book",
+      "url": "https://sre.google/sre-book/table-of-contents/",
+      "category": "reliability",
+      "tags": ["sre", "reliability", "monitoring", "health", "logging", "failure-isolation"],
+      "summary": "Google's SRE book covering reliability principles, monitoring, incident response, and operating distributed services.",
+      "project_relevance": "Frames lightweight health endpoints, structured logs, request IDs, and isolation of optional DeepSeek failures.",
+      "key_points": ["Expose signals tied to user-visible reliability.", "Separate required dependency readiness from optional integration health.", "Prefer actionable logs and bounded failure domains."]
+    }
+  ]
+}

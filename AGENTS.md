@@ -16,6 +16,12 @@
 - `nginx/`, `compose.yaml`: local/runtime packaging and one-origin routing.
 - `docs/`: requirements, architecture, decisions, and sequential Codex phase prompts.
 
+## AiSpace reference MCP
+
+The project-local MCP server `aispace_sources` provides curated engineering references. Use it before architecture- or correctness-sensitive work involving PostgreSQL overlap/concurrency, ranges/timezones, migrations, authentication/security, DeepSeek validation and failure isolation, Docker health/readiness, integration/concurrency/E2E tests, or frontend server-state and booking flows.
+
+Preferred workflow: call `search_sources` for the topic, `get_guidance` for AiSpace-specific rules, and `get_source` for the relevant primary source; then treat repository architecture and explicit contracts as authoritative. Do not query it for trivial formatting, renames, or unrelated edits. If guidance conflicts with an intentional project decision, report the conflict instead of silently changing architecture. Adapt documentation examples to the project's versions and contracts rather than copying them blindly.
+
 ## Required commands
 
 - Local stack: `docker compose up --build`; validate with `docker compose config`.

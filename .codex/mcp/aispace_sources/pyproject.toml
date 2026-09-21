@@ -1,0 +1,19 @@
+[project]
+name = "aispace-sources-mcp"
+version = "0.1.0"
+description = "Offline curated engineering references for the AiSpace project"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "mcp>=2,<3",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8,<10",
+]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+pythonpath = ["."]
+testpaths = ["tests"]

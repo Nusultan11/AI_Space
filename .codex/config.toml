@@ -1,0 +1,6 @@
+# Playwright MCP is optional for interactive investigation. Standard E2E uses
+# the project-local Playwright CLI. No credentials belong in this file.
+[mcp_servers.playwright]
+command = "npx"
+args = ["-y", "@playwright/mcp@latest"]
+enabled = false

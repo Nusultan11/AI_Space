@@ -1,0 +1,106 @@
+# AiSpace architecture blueprint
+
+## System shape
+
+```text
+Browser
+  → Nginx (single origin; static frontend and /api proxy)
+    → React + TypeScript frontend
+    → FastAPI /api/v1
+      → authentication and request validation
+      → BookingService / AvailabilityService / BookingIntentParser
+      → SQLAlchemy 2 + asyncpg
+        → PostgreSQL
+
+DeepSeek API ← DeepSeekBookingIntentParser (intent extraction only)
+```
+
+AiSpace is one deployable application, not a microservice system. PostgreSQL is the source of truth. The frontend owns interaction state; the backend owns all domain and authorization rules.
+
+## Monorepo boundaries
+
+```text
+backend/              Python package, migrations, unit/integration tests
+frontend/             React application and component tests
+e2e/                  Playwright configuration and browser journeys
+nginx/                production SPA/proxy configuration
+.github/workflows/    CI
+.codex/               project-local Codex configuration
+docs/                 requirements, architecture, decisions, phase prompts
+compose.yaml          local and review runtime
+```
+
+The intended backend layers are HTTP routers/dependencies → application services → repositories/models/integrations. Avoid generic base classes and abstractions until two concrete implementations need them. The parser protocol is justified because production and fake implementations are required.
+
+## Data model
+
+### `users`
+
+UUID primary key; normalized unique email; name; `password_hash`; `is_active`; timezone-aware created/updated timestamps.
+
+### `rooms`
+
+UUID primary key; unique name; capacity with `capacity > 0`; optional description; `is_active`; timezone-aware created/updated timestamps.
+
+### `bookings`
+
+UUID primary key; indexed foreign keys to room and user; title; `start_at`/`end_at` as `TIMESTAMPTZ`; optional positive `participants_count`; status enum (`confirmed`, `cancelled`); created/updated timestamps; nullable `cancelled_at`; `end_at > start_at` check.
+
+Enable `btree_gist` and add a GiST exclusion constraint equivalent to:
+
+```sql
+EXCLUDE USING gist (
+  room_id WITH =,
+  tstzrange(start_at, end_at, '[)') WITH &&
+) WHERE (status = 'confirmed')
+```
+
+This constraint—not an application query—settles concurrent races. Translate its integrity violation to the standard conflict response after rollback.
+
+## Time model
+
+- API date-times must include an offset. Internally compare aware values and persist instants with `TIMESTAMPTZ`.
+- `OFFICE_TIMEZONE` controls natural-language interpretation and display context; default `Asia/Almaty`.
+- Half-open intervals allow an event ending at 15:00 and another starting at 15:00.
+- Python uses `zoneinfo`; calculation and comparison are deterministic and never delegated to the LLM.
+
+## Core services
+
+### `BookingService`
+
+The only booking mutation path for both manual and AI-confirmed flows. It validates room/activity, interval, past time, participant count/capacity where specified, ownership for cancellation, and transaction behavior. It performs a friendly conflict pre-check, persists in a transaction, handles the database exclusion violation, rolls back, and returns a 409 conflict with alternatives when available.
+
+### `AvailabilityService`
+
+Queries schedules and free rooms using `[start, end)` rules and supplies alternative rooms and nearest slots. It does not create bookings.
+
+### `BookingIntentParser`
+
+Receives text, local current time, timezone, and the current room catalog. `DeepSeekBookingIntentParser` calls the external API; `FakeBookingIntentParser` makes tests deterministic. Both return the same validated `BookingIntent` contract. Parser output is a preview and has no persistence capability.
+
+## API and errors
+
+FastAPI exposes `/api/v1` endpoints listed in `docs/TASK.md`. JWT Bearer dependencies provide the current user. Responses use one error shape, for example `{"error":{"code":"booking_conflict","message":"…","details":{…},"request_id":"…"}}`; exact fields are finalized in phase 01 and then remain consistent.
+
+Liveness does not depend on PostgreSQL or DeepSeek. Readiness checks PostgreSQL and other required local dependencies; DeepSeek is optional because manual booking must remain healthy.
+
+## AI trust boundary
+
+DeepSeek receives only the minimum context needed. Its structured JSON is parsed, schema-validated, cross-checked against the supplied room catalog, and business-validated. Ambiguous or missing critical input returns clarification. The frontend shows a preview and confirmation calls the same normal booking endpoint as the manual form.
+
+## Runtime
+
+Docker Compose will orchestrate PostgreSQL health, one-shot migrations, one-shot idempotent seed, backend, and Nginx-served frontend. Service dependency conditions prevent startup races. Configuration comes from environment variables documented in `.env.example`; production secrets are never defaults.
+
+## Verification strategy
+
+- Pure unit tests for validation and deterministic service decisions.
+- FastAPI/API tests for contracts and authorization.
+- Real PostgreSQL integration tests for migrations, range logic, constraint translation, and concurrency.
+- Mocked/fake DeepSeek contract and failure tests in normal CI.
+- Frontend component tests for state and validation; Playwright for the two critical user journeys.
+- CI checks format, lint, types, tests, builds, migrations, Docker images, and E2E where practical.
+
+## Observability and security
+
+Middleware assigns/propagates request IDs and emits structured logs. Redact passwords, hashes, tokens, API keys, authorization headers, and unnecessary meeting text. Apply Argon2 password hashing, short explicit JWT configuration, input validation at boundaries, and least-privilege database/runtime configuration.

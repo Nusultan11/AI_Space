@@ -1,0 +1,41 @@
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.pyright/
+.coverage
+htmlcov/
+*.egg-info/
+dist/
+build/
+
+# Node and browser tests
+node_modules/
+frontend/dist/
+playwright-report/
+test-results/
+blob-report/
+coverage/
+
+# Editors and OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.swp
+
+# Runtime data and logs
+*.log
+data/
+artifacts/
+postgres-data/

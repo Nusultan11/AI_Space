@@ -94,7 +94,7 @@ Timeouts map to `ai_timeout`/504; missing configuration, connection failures, ra
 
 ## Runtime
 
-Docker Compose will orchestrate PostgreSQL health, one-shot migrations, one-shot idempotent seed, backend, and Nginx-served frontend. Service dependency conditions prevent startup races. Configuration comes from environment variables documented in `.env.example`; production secrets are never defaults.
+Docker Compose will orchestrate PostgreSQL health, one-shot migrations, one-shot idempotent seed, backend, and Nginx-served frontend. Service dependency conditions prevent startup races. Configuration comes from environment variables documented in `.env.example`; production secrets are never defaults. For simple local review, migrations and application runtime share the demo PostgreSQL role. Production hardening should provision a separate migration role and a least-privilege runtime role.
 
 ## Verification strategy
 
@@ -108,4 +108,4 @@ Docker Compose will orchestrate PostgreSQL health, one-shot migrations, one-shot
 
 ## Observability and security
 
-Middleware assigns/propagates request IDs and emits structured logs. Redact passwords, hashes, tokens, API keys, authorization headers, and unnecessary meeting text. Apply Argon2 password hashing, short explicit JWT configuration, input validation at boundaries, and least-privilege database/runtime configuration.
+Middleware assigns/propagates request IDs and emits structured logs. Redact passwords, hashes, tokens, API keys, authorization headers, and unnecessary meeting text. Apply Argon2 password hashing, short explicit JWT configuration, and input validation at boundaries. The local single-role database tradeoff above is not a production least-privilege claim.

@@ -1,15 +1,16 @@
 import { Alert, Box, CircularProgress, MenuItem, Paper, TextField, Typography } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { api } from "../../api/client";
-import { browserToday } from "../../lib/time";
+import { browserToday, todayInTimeZone } from "../../lib/time";
 import { RoomSchedule } from "./RoomSchedule";
 
 export function RoomsPanel() {
   const rooms = useQuery({ queryKey: ["rooms"], queryFn: api.rooms });
   const [roomId, setRoomId] = useState("");
   const [date, setDate] = useState(browserToday);
+  const dateWasChanged = useRef(false);
 
   useEffect(() => {
     if (!roomId && rooms.data?.[0]) {
@@ -22,6 +23,12 @@ export function RoomsPanel() {
     queryFn: () => api.schedule(roomId, date),
     enabled: Boolean(roomId && date),
   });
+
+  useEffect(() => {
+    if (!schedule.data || dateWasChanged.current) return;
+    const officeToday = todayInTimeZone(schedule.data.timezone);
+    if (date !== officeToday) setDate(officeToday);
+  }, [date, schedule.data]);
 
   return (
     <Paper component="section" aria-labelledby="rooms-heading" sx={{ p: { xs: 2, sm: 3 } }}>
@@ -50,7 +57,10 @@ export function RoomsPanel() {
               label="Schedule date"
               type="date"
               value={date}
-              onChange={(event) => setDate(event.target.value)}
+              onChange={(event) => {
+                dateWasChanged.current = true;
+                setDate(event.target.value);
+              }}
               slotProps={{ inputLabel: { shrink: true } }}
             />
           </Box>

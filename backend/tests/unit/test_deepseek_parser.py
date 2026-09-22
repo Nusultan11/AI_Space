@@ -83,7 +83,12 @@ async def test_parser_accepts_valid_json_and_sends_only_narrow_context() -> None
     assert intent.room_id == room.id
     assert intent.needs_clarification is False
     assert completions.request is not None
+    assert completions.request["model"] == "test-model"
     assert completions.request["response_format"] == {"type": "json_object"}
+    assert completions.request["temperature"] == 0
+    assert completions.request["max_tokens"] == 1024
+    assert completions.request["extra_body"] == {"thinking": {"type": "disabled"}}
+    assert '"needs_clarification": true' in completions.request["messages"][0]["content"]
     provider_context = json.loads(completions.request["messages"][1]["content"])
     assert set(provider_context) == {
         "user_text",

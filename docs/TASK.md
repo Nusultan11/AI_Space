@@ -1,6 +1,6 @@
 # AiSpace product requirements
 
-This document preserves the supplied technical assignment as the source of product requirements. `docs/ARCHITECTURE.md` is the implementation blueprint. Unspecified behavior is listed as open in `docs/DECISIONS.md`; it must not be guessed silently.
+This internal implementation specification is derived from the supplied assignment. It preserves the assignment's product requirements and records the concrete implementation and verification choices needed to build them; not every listed technical detail is a verbatim assignment requirement. `docs/ARCHITECTURE.md` is the implementation blueprint. Unspecified behavior is listed as open in `docs/DECISIONS.md`; it must not be guessed silently.
 
 ## Product outcome
 

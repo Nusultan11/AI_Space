@@ -10,13 +10,18 @@ import {
   Typography,
 } from "@mui/material";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 
 import { ApiError, api, bookingConflictDetails } from "../../api/client";
 import type { Booking, BookingConflictDetails, Room } from "../../api/types";
-import { browserToday, instantToLocalInput, localDateTimeToIso } from "../../lib/time";
+import {
+  browserToday,
+  instantToLocalInput,
+  localDateTimeToIso,
+  todayInTimeZone,
+} from "../../lib/time";
 import { ConflictAlternatives } from "./ConflictAlternatives";
 
 const bookingSchema = z
@@ -56,6 +61,7 @@ export function BookingForm({
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [conflict, setConflict] = useState<BookingConflictDetails | null>(null);
+  const preserveDate = useRef(initialValues?.date !== undefined);
   const form = useForm<BookingFormValues>({
     resolver: zodResolver(bookingSchema),
     defaultValues: {
@@ -74,6 +80,14 @@ export function BookingForm({
     queryFn: () => api.schedule(roomId, date),
     enabled: Boolean(roomId && date),
   });
+
+  useEffect(() => {
+    if (!schedule.data || preserveDate.current) return;
+    const officeToday = todayInTimeZone(schedule.data.timezone);
+    if (date !== officeToday) {
+      form.setValue("date", officeToday, { shouldValidate: true });
+    }
+  }, [date, form, schedule.data]);
 
   const createBooking = useMutation({
     mutationFn: api.createBooking,
@@ -158,7 +172,11 @@ export function BookingForm({
           <TextField
             label="Date"
             type="date"
-            {...form.register("date")}
+            {...form.register("date", {
+              onChange: () => {
+                preserveDate.current = true;
+              },
+            })}
             error={Boolean(form.formState.errors.date)}
             helperText={form.formState.errors.date?.message}
             slotProps={{ inputLabel: { shrink: true } }}

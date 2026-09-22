@@ -81,6 +81,8 @@ class DeepSeekBookingIntentParser:
                 ),
                 response_format={"type": "json_object"},
                 temperature=0,
+                max_tokens=1024,
+                extra_body={"thinking": {"type": "disabled"}},
             )
         except APITimeoutError:
             raise ai_timeout() from None

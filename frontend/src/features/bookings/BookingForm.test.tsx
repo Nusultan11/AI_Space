@@ -2,6 +2,7 @@ import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { Room } from "../../api/types";
+import { todayInTimeZone } from "../../lib/time";
 import { renderWithProviders } from "../../test/render";
 import { BookingForm } from "./BookingForm";
 
@@ -35,10 +36,41 @@ function schedule(date: string) {
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 
 describe("BookingForm", () => {
+  it("normalizes the untouched default date to office-local today", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const now = new Date("2030-01-01T12:00:00Z");
+    vi.setSystemTime(now);
+    expect(todayInTimeZone("UTC", now)).toBe("2030-01-01");
+    expect(todayInTimeZone("Pacific/Kiritimati", now)).toBe("2030-01-02");
+
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input), "http://localhost");
+      const date = url.searchParams.get("date");
+      if (url.pathname.includes("/schedule") && date) {
+        return jsonResponse({ ...schedule(date), timezone: "Pacific/Kiritimati" });
+      }
+      throw new Error(`Unexpected request ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    renderWithProviders(<BookingForm rooms={[room]} />);
+
+    const dateInput = screen.getByLabelText("Date");
+    await waitFor(() => expect(dateInput).toHaveValue("2030-01-02"));
+
+    fireEvent.change(dateInput, { target: { value: "2030-01-05" } });
+    await waitFor(() =>
+      expect(fetchMock.mock.calls.some(([input]) => String(input).includes("date=2030-01-05"))).toBe(
+        true,
+      ),
+    );
+    expect(dateInput).toHaveValue("2030-01-05");
+  });
+
   it("submits an offset-aware booking through the normal booking endpoint", async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);

@@ -71,8 +71,13 @@ export function formatInstant(iso: string, timeZone: string): string {
   }).format(new Date(iso));
 }
 
-export function browserToday(): string {
-  const now = new Date();
+export function todayInTimeZone(timeZone: string, now = new Date()): string {
+  const parts = numericParts(now, timeZone);
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${parts.year}-${pad(parts.month)}-${pad(parts.day)}`;
+}
+
+export function browserToday(now = new Date()): string {
   const pad = (value: number) => String(value).padStart(2, "0");
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 }

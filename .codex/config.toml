@@ -8,5 +8,5 @@ enabled = false
 [mcp_servers.aispace_sources]
 command = "uv"
 args = ["run", "python", "server.py"]
-cwd = "C:/Users/nurs/AI_Space/.codex/mcp/aispace_sources"
+cwd = "mcp/aispace_sources"
 enabled = true

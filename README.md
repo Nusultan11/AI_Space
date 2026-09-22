@@ -45,6 +45,8 @@ Copy `.env.example` to `.env` only when local overrides are needed. Never commit
 
 `DEEPSEEK_API_KEY` is optional. With no key, manual booking and all non-AI functionality remain available, while the AI intent endpoint returns its documented unavailable response. Normal tests and CI do not require a live DeepSeek key.
 
+Local Compose deliberately uses the same demo PostgreSQL role for migrations and application runtime to keep review startup simple. A production deployment should provision separate migration and least-privilege runtime roles rather than reuse these local credentials.
+
 ## Architecture boundaries
 
 - The FastAPI application is one deployable backend; PostgreSQL owns persistent state.
@@ -65,7 +67,7 @@ The AI endpoint accepts natural language, asks DeepSeek for structured intent, v
 
 ## Browser flows and accessibility
 
-The SPA provides sign-in/registration, room and availability views, manual booking, AI-assisted preview, booking history, and cancellation. Forms use labeled controls, keyboard-operable MUI components, visible validation feedback, and status/error messaging. Browser tests exercise the public Nginx route and real booking APIs; only the DeepSeek intent call is mocked in the AI flow.
+The SPA provides sign-in/registration, room and availability views, manual booking, AI-assisted preview, booking history, and cancellation. The frontend offers the cancel action for upcoming confirmed bookings; the backend enforces ownership and already-cancelled state without adding a separate rule that forbids cancelling past bookings. Forms use labeled controls, keyboard-operable MUI components, visible validation feedback, and status/error messaging. Browser tests exercise the public Nginx route and real booking APIs; only the DeepSeek intent call is mocked in the AI flow.
 
 ## API surface
 

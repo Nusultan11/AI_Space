@@ -17,6 +17,18 @@ one ID from the supplied active-room catalog. participants_count is optional.
 Timestamps must include a UTC offset. Do not check or claim room availability.
 Do not create a booking. Missing or ambiguous critical values must set
 needs_clarification=true, list the missing fields, and include a concise question.
+Example JSON for a request that needs clarification:
+{
+  "room_id": null,
+  "room_reference": null,
+  "start_at": null,
+  "end_at": null,
+  "title": null,
+  "participants_count": null,
+  "needs_clarification": true,
+  "missing_fields": ["room_id", "start_at", "end_at", "title"],
+  "clarification_message": "Which room, time, and title should I use?"
+}
 """
 
 

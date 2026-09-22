@@ -87,3 +87,9 @@ Map timeouts to `ai_timeout`/504, unavailable configuration and provider failure
 Keep only the short-lived access token in `sessionStorage`; passwords and user records are never persisted by the frontend. An authenticated 401 clears the token and TanStack Query cache. TanStack Query owns rooms, schedules, bookings, and mutation invalidation, while React Hook Form and Zod provide basic form feedback without reproducing backend business rules.
 
 Manual input and editable AI previews render the same booking form and execute the same `POST /bookings` mutation. Conflict alternatives update that form and require another explicit submit. Browser AI E2E replaces only `POST /ai/booking-intent`; booking persistence and PostgreSQL remain real.
+
+## ADR-013: Local Compose uses one demo database role
+
+**Status:** Accepted
+
+The local review stack deliberately reuses one demo PostgreSQL role for migrations, seed, and application runtime. This keeps `docker compose up --build` self-contained and does not claim production least privilege. A production deployment should provision a privileged migration role separately from a restricted runtime role instead of copying the local credentials model.

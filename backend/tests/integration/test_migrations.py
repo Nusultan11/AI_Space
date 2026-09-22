@@ -20,7 +20,7 @@ def test_alembic_upgrade_on_clean_postgresql(
         connection.cursor() as cursor,
     ):
         cursor.execute("SELECT version_num FROM alembic_version")
-        assert cursor.fetchone() == ("0002_auth_rooms",)
+        assert cursor.fetchone() == ("0003_booking_core",)
         cursor.execute(
             """
             SELECT table_name
@@ -29,4 +29,9 @@ def test_alembic_upgrade_on_clean_postgresql(
             ORDER BY table_name
             """
         )
-        assert cursor.fetchall() == [("alembic_version",), ("rooms",), ("users",)]
+        assert cursor.fetchall() == [
+            ("alembic_version",),
+            ("bookings",),
+            ("rooms",),
+            ("users",),
+        ]

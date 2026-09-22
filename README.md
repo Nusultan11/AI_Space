@@ -1,6 +1,6 @@
 # AiSpace
 
-AiSpace is a production-minded meeting-room booking test project. Phase 01 provides the runnable application foundation; product features remain intentionally deferred to later phase prompts in `docs/codex/`.
+AiSpace is a production-minded meeting-room booking test project. Phase 02 provides authentication, current-user identity, and an authenticated read-only room catalog on the runnable foundation.
 
 ## Problem
 
@@ -39,7 +39,7 @@ Invoke-RestMethod http://localhost:8080/api/v1/health/ready
 docker compose ps
 ```
 
-Run component gates from their workspace READMEs. Continue sequential implementation with `docs/codex/02-auth-rooms.md` only after Phase 01 verification passes.
+The runtime seeds the three demo rooms idempotently after migrations. Register at `POST /api/v1/auth/register`, obtain a Bearer token from `POST /api/v1/auth/login`, then use `/api/v1/users/me` and `/api/v1/rooms`. Continue with `docs/codex/03-booking-core.md` only after Phase 02 verification passes.
 
 ## Architecture and data model
 
@@ -67,7 +67,7 @@ Passwords use Argon2; JWT/API secrets remain in environment variables and sensit
 
 ## Known limitations
 
-Phase 01 intentionally contains no users, rooms, bookings, authentication, availability, seed data, or DeepSeek integration. The baseline migration creates only Alembic's revision table. CI workflows and product functionality arrive in later phases.
+Phase 02 intentionally contains no bookings, availability, cancellation, booking UI, or DeepSeek integration. Authentication uses short-lived access tokens only; refresh tokens, OAuth, SSO, and RBAC are out of scope.
 
 ## Future improvements
 

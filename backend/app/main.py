@@ -11,6 +11,7 @@ from fastapi import FastAPI, Request, Response
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from app.api.health import router as health_router
+from app.api.v1.router import router as api_v1_router
 from app.core.config import Settings, get_settings
 from app.core.errors import AppError, app_error_handler
 from app.core.logging import configure_logging
@@ -62,6 +63,7 @@ def create_app(settings: Settings | None = None, engine: AsyncEngine | None = No
             reset_request_id(token)
 
     application.include_router(health_router, prefix="/api/v1")
+    application.include_router(api_v1_router, prefix="/api/v1")
     return application
 
 

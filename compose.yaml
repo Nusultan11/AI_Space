@@ -27,10 +27,23 @@ services:
       APP_LOG_LEVEL: ${APP_LOG_LEVEL:-INFO}
       OFFICE_TIMEZONE: ${OFFICE_TIMEZONE:-Asia/Almaty}
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-aispace}:${POSTGRES_PASSWORD:-change-me-local-only}@postgres:5432/${POSTGRES_DB:-aispace}
+      JWT_SECRET: ${JWT_SECRET:-change-me-use-a-long-random-value}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
     command: ["alembic", "upgrade", "head"]
     depends_on:
       postgres:
         condition: service_healthy
+    restart: "no"
+
+  seed:
+    build:
+      context: ./backend
+    environment: *backend-environment
+    command: ["python", "-m", "app.db.seed"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
     restart: "no"
 
   backend:
@@ -41,6 +54,8 @@ services:
       postgres:
         condition: service_healthy
       migrate:
+        condition: service_completed_successfully
+      seed:
         condition: service_completed_successfully
     healthcheck:
       test:

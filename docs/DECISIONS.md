@@ -48,11 +48,20 @@ The backend accepts a bounded safe `X-Request-ID` or generates a UUID, returns i
 
 The original assignment does not define these values. Do not silently choose product behavior without recording the choice and rationale:
 
-- JWT lifetime and whether refresh tokens are required (only Bearer JWT is required).
-- Registration password policy and duplicate-email disclosure behavior.
-- Whether inactive rooms remain visible in historical schedules.
 - Participant-capacity behavior when participant count is omitted, and whether over-capacity is an error or alternative-search trigger.
 - Default duration when natural language provides a start but no end/duration; missing critical values must never be invented.
 - Search horizon and granularity for “nearest free slot.”
 - Default schedule window, pagination shape, and booking-list ordering.
 - Production deployment/TLS details; the assignment requires local Docker Compose and Nginx, not cloud deployment.
+
+## ADR-008: Phase 02 authentication policy
+
+**Status:** Accepted
+
+Issue signed Bearer access tokens for 30 minutes with `sub`, `iat`, and `exp` claims; no refresh-token infrastructure is required. Registration accepts passwords from 8 through 128 characters and reports an existing normalized email as `email_already_registered` with HTTP 409. Login, including inactive accounts, always returns the same `invalid_credentials` response. Passwords use pwdlib's recommended Argon2 configuration.
+
+## ADR-009: The public room catalog contains active rooms only
+
+**Status:** Accepted
+
+Authenticated users may list and retrieve active rooms. A missing or inactive room returns the same `room_not_found` response. The separate idempotent seed inserts the three assignment rooms without creating duplicates; it does not create schema at runtime.

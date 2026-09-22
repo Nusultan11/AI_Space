@@ -17,7 +17,7 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
           version: "0.12.1"
           enable-cache: true
@@ -97,8 +97,26 @@ jobs:
       - name: Verify services and one-shot jobs
         run: |
           docker compose ps --all
-          test "$(docker inspect -f '{{.State.ExitCode}}' "$(docker compose ps -q migrate)")" = "0"
-          test "$(docker inspect -f '{{.State.ExitCode}}' "$(docker compose ps -q seed)")" = "0"
+          migrate_id="$(docker compose ps --all -q migrate)"
+          seed_id="$(docker compose ps --all -q seed)"
+          if [ -z "$migrate_id" ]; then
+            echo "::error::migrate container was not found"
+            exit 1
+          fi
+          if [ -z "$seed_id" ]; then
+            echo "::error::seed container was not found"
+            exit 1
+          fi
+          migrate_exit_code="$(docker inspect -f '{{.State.ExitCode}}' "$migrate_id")"
+          seed_exit_code="$(docker inspect -f '{{.State.ExitCode}}' "$seed_id")"
+          if [ "$migrate_exit_code" != "0" ]; then
+            echo "::error::migrate exited with code $migrate_exit_code"
+            exit 1
+          fi
+          if [ "$seed_exit_code" != "0" ]; then
+            echo "::error::seed exited with code $seed_exit_code"
+            exit 1
+          fi
           curl --fail http://127.0.0.1:8080/api/v1/health/live
           curl --fail http://127.0.0.1:8080/api/v1/health/ready
       - name: Replay migrations and seed

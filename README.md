@@ -55,9 +55,9 @@ Copy `.env.example` to `.env` only when local overrides are needed. Never commit
 
 ## Data, time, availability, and conflicts
 
-The core data model contains users, rooms, room schedules, and bookings. Booking timestamps are stored as timezone-aware `TIMESTAMPTZ` values. Intervals use half-open semantics, `[start, end)`, so one booking may start exactly when another ends. The office timezone defaults to `Asia/Almaty` and is configurable.
+The persistent core data model contains users, rooms, and bookings. A room schedule is a derived, read-only view of confirmed bookings that overlap one selected local calendar day; that day's boundaries are interpreted using `OFFICE_TIMEZONE`. Booking timestamps are stored as timezone-aware `TIMESTAMPTZ` values. Intervals use half-open semantics, `[start, end)`, so one booking may start exactly when another ends. The office timezone defaults to `Asia/Almaty` and is configurable.
 
-Availability is computed deterministically from room schedules and existing confirmed bookings. PostgreSQL is the final concurrency authority: a `btree_gist` exclusion constraint prevents two confirmed bookings for one room from overlapping, including concurrent requests. Conflict responses first suggest active rooms with enough capacity that are free for the requested interval; when none qualify, they suggest exact-duration slots for the requested room within the bounded search window. These alternatives are advisory—the database constraint still decides whether the retried booking succeeds.
+Availability and derived schedule views are computed deterministically from active rooms and confirmed bookings. PostgreSQL is the final concurrency authority: a `btree_gist` exclusion constraint prevents two confirmed bookings for one room from overlapping, including concurrent requests. Conflict responses first suggest active rooms with enough capacity that are free for the requested interval; when none qualify, they suggest exact-duration slots for the requested room within the bounded search window. These alternatives are advisory—the database constraint still decides whether the retried booking succeeds.
 
 ## DeepSeek trust boundary
 
@@ -134,7 +134,7 @@ GitHub Actions runs three gates: the complete backend quality suite, the complet
 
 ## Assumptions, tradeoffs, and limitations
 
-- Room schedules are explicit weekly office-hours records; recurring meetings are outside the current scope.
+- There is no weekly office-hours or business-hours model; a business-hours policy is intentionally not implemented. Recurring meetings are outside the current scope.
 - AI suggestions require manual review and confirmation; live DeepSeek connectivity is deployment-specific and is not verified in CI.
 - The frontend production build currently emits Vite's informational large-chunk warning (approximately 632 kB); the build still succeeds and bundle splitting is deferred because it is not a Phase 07 correctness failure.
 - The repository intentionally avoids microservices, queues, Redis, Kubernetes, LangChain, and other infrastructure without a concrete requirement.

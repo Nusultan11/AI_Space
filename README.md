@@ -138,3 +138,8 @@ GitHub Actions runs three gates: the complete backend quality suite, the complet
 - AI suggestions require manual review and confirmation; live DeepSeek connectivity is deployment-specific and is not verified in CI.
 - The frontend production build currently emits Vite's informational large-chunk warning (approximately 632 kB); the build still succeeds and bundle splitting is deferred because it is not a Phase 07 correctness failure.
 - The repository intentionally avoids microservices, queues, Redis, Kubernetes, LangChain, and other infrastructure without a concrete requirement.
+
+## Future improvements
+
+- Resolve the documented open choices for booking-list ordering and production deployment/TLS when product and target-environment requirements are available.
+- Measure real frontend loading performance before deciding whether the current production bundle needs code splitting or other optimization.

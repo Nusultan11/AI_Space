@@ -79,3 +79,11 @@ Known participant counts set the alternative room's minimum capacity. When count
 Use the OpenAI Python SDK with DeepSeek's compatible base URL, a configured timeout, JSON mode, and no SDK retries. The parser receives only user text, current office-local time, timezone, and active room IDs/names/capacities. It returns an untrusted `BookingIntent`; `AIBookingService` performs catalog and domain validation and normalizes genuinely missing critical values to clarification. It never checks availability or invokes `BookingService`.
 
 Map timeouts to `ai_timeout`/504, unavailable configuration and provider failures (including 429/5xx) to `ai_unavailable`/503, and invalid provider output to `ai_invalid_response`/502. DeepSeek configuration is supplied only to the backend container. Missing configuration disables only the AI endpoint; readiness and manual booking remain healthy. Normal tests use fakes or mocked SDK responses and make no live DeepSeek calls.
+
+## ADR-012: Phase 06 browser session and server state
+
+**Status:** Accepted
+
+Keep only the short-lived access token in `sessionStorage`; passwords and user records are never persisted by the frontend. An authenticated 401 clears the token and TanStack Query cache. TanStack Query owns rooms, schedules, bookings, and mutation invalidation, while React Hook Form and Zod provide basic form feedback without reproducing backend business rules.
+
+Manual input and editable AI previews render the same booking form and execute the same `POST /bookings` mutation. Conflict alternatives update that form and require another explicit submit. Browser AI E2E replaces only `POST /ai/booking-intent`; booking persistence and PostgreSQL remain real.

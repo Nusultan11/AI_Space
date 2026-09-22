@@ -1,10 +1,12 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import App from "./App";
+import { renderWithProviders } from "./test/render";
 
 afterEach(() => {
   cleanup();
+  sessionStorage.clear();
   vi.unstubAllGlobals();
 });
 
@@ -12,7 +14,7 @@ describe("App health state", () => {
   it("shows loading while the backend request is pending", () => {
     vi.stubGlobal("fetch", vi.fn(() => new Promise(() => undefined)));
 
-    render(<App />);
+    renderWithProviders(<App />);
 
     expect(screen.getByRole("status")).toHaveTextContent("Checking backend health");
   });
@@ -26,18 +28,17 @@ describe("App health state", () => {
       }),
     );
 
-    render(<App />);
+    renderWithProviders(<App />);
 
     expect(await screen.findByText("Backend connected")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Sign in" })).toBeVisible();
   });
 
   it("shows a clear error when the backend request fails", async () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network error")));
 
-    render(<App />);
+    renderWithProviders(<App />);
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Backend unavailable: network error",
-    );
+    expect(await screen.findByText("Backend unavailable")).toBeInTheDocument();
   });
 });

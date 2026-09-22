@@ -1,6 +1,6 @@
 # AiSpace
 
-AiSpace is a production-minded meeting-room booking test project. Phase 05 adds safe DeepSeek-backed booking-intent previews to authentication, concurrency-safe booking, schedules, availability, and conflict alternatives.
+AiSpace is a production-minded meeting-room booking application. Phase 06 delivers the complete browser workflow for authentication, room schedules, manual and AI-assisted booking, conflict alternatives, personal bookings, and cancellation.
 
 ## Problem
 
@@ -39,7 +39,7 @@ Invoke-RestMethod http://localhost:8080/api/v1/health/ready
 docker compose ps
 ```
 
-The runtime seeds the three demo rooms idempotently after migrations. Register at `POST /api/v1/auth/register`, obtain a Bearer token from `POST /api/v1/auth/login`, then use `/api/v1/users/me`, `/api/v1/rooms`, `/api/v1/bookings`, `/api/v1/rooms/{id}/schedule?date=YYYY-MM-DD`, `/api/v1/availability?start_at=...&end_at=...`, and `POST /api/v1/ai/booking-intent`. Continue with `docs/codex/06-frontend.md` only after Phase 05 verification passes.
+The runtime seeds the three demo rooms idempotently after migrations. Open the browser UI to register or sign in, inspect room schedules, create a manual booking, apply conflict alternatives, review or cancel personal bookings, and prepare an editable AI booking preview. AI confirmation uses the same normal booking endpoint as the manual form. Continue with `docs/codex/07-quality.md` only after Phase 06 verification passes.
 
 ## Architecture and data model
 
@@ -53,7 +53,7 @@ Conflict responses first suggest up to three active, sufficiently large rooms fr
 
 ## Natural-language booking and AI reliability
 
-DeepSeek may only produce a validated `BookingIntent` preview. It cannot check availability or write to the database. Missing or ambiguous critical values produce a clarification preview; confirmation uses the normal booking endpoint. Configure `DEEPSEEK_API_KEY`, `DEEPSEEK_BASE_URL`, `DEEPSEEK_MODEL`, and `DEEPSEEK_TIMEOUT_SECONDS` for live parsing. Missing configuration or provider failure affects only the AI endpoint, not readiness or manual booking. Normal tests use no live key or provider call.
+DeepSeek may only produce a validated `BookingIntent` preview. It cannot check availability or write to the database. Missing or ambiguous critical values produce a clarification preview; valid results remain editable and confirmation uses the same `POST /bookings` path as manual entry. Configure `DEEPSEEK_API_KEY`, `DEEPSEEK_BASE_URL`, `DEEPSEEK_MODEL`, and `DEEPSEEK_TIMEOUT_SECONDS` for live parsing. Missing configuration or provider failure affects only the AI panel, not readiness or manual booking. The AI Playwright journey mocks only the parser endpoint; its confirmed booking still uses the real backend and PostgreSQL.
 
 ## Timezone strategy
 
@@ -69,7 +69,7 @@ Passwords use Argon2; JWT/API secrets remain in environment variables and sensit
 
 ## Known limitations
 
-Phase 05 has no booking frontend, recurring meetings, notifications, or business-hours policy. Live DeepSeek connectivity is configuration-dependent and was not required for normal verification. Authentication uses short-lived access tokens only; refresh tokens, OAuth, SSO, and RBAC are out of scope.
+Phase 06 has no recurring meetings, notifications, or business-hours policy. Live DeepSeek connectivity is configuration-dependent and is not required for normal verification. Authentication uses short-lived access tokens stored only in browser session storage; refresh tokens, OAuth, SSO, and RBAC are out of scope.
 
 ## Future improvements
 

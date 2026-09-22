@@ -5,6 +5,7 @@ test("serves the SPA and proxies backend health", async ({ page, request }) => {
 
   await expect(page.getByRole("heading", { name: "AiSpace" })).toBeVisible();
   await expect(page.getByRole("status")).toHaveText("Backend connected");
+  await expect(page.getByRole("tab", { name: "Sign in" })).toBeVisible();
 
   const live = await request.get("/api/v1/health/live");
   expect(live.ok()).toBe(true);

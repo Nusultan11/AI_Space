@@ -32,6 +32,18 @@ Use a React client, one FastAPI application, and one PostgreSQL database. Keep b
 
 Nginx serves the built SPA and proxies `/api` to FastAPI. This keeps browser configuration and CORS exposure small while retaining separate frontend/backend development tooling.
 
+## ADR-006: Liveness and readiness have different dependency scopes
+
+**Status:** Accepted
+
+`/health/live` reports process health without external calls. `/health/ready` runs a minimal PostgreSQL query because the database is required for application work. DeepSeek is optional and is deliberately excluded from readiness so its failure cannot disable manual booking.
+
+## ADR-007: Request IDs and errors use one small transport contract
+
+**Status:** Accepted
+
+The backend accepts a bounded safe `X-Request-ID` or generates a UUID, returns it in the response, and binds it to structured logs. Expected API failures use `{"error":{"code","message","details?","request_id"}}`; logs recursively redact credential-like fields and private meeting content.
+
 ## Open decisions
 
 The original assignment does not define these values. Do not silently choose product behavior without recording the choice and rationale:

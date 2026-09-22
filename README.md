@@ -1,6 +1,6 @@
 # AiSpace
 
-AiSpace is a production-minded meeting-room booking test project. This repository is currently bootstrapped for sequential Codex-driven implementation; product code is intentionally deferred to the phase prompts in `docs/codex/`.
+AiSpace is a production-minded meeting-room booking test project. Phase 01 provides the runnable application foundation; product features remain intentionally deferred to later phase prompts in `docs/codex/`.
 
 ## Problem
 
@@ -22,17 +22,24 @@ FastAPI, Pydantic v2, SQLAlchemy 2, PostgreSQL, Alembic, React, TypeScript, Vite
 
 ## Quick start
 
-Bootstrap currently validates with:
+With Docker Desktop running:
 
-```sh
-docker compose config
-```
-
-Implement phases in order, beginning with `docs/codex/01-foundation.md`. The completed application must start with:
-
-```sh
+```powershell
+Copy-Item .env.example .env
 docker compose up --build
 ```
+
+Open `http://localhost:8080`. Nginx serves the React shell and proxies `/api` to FastAPI. The stack waits for PostgreSQL health, applies Alembic migrations once, then starts the backend and frontend.
+
+Useful checks:
+
+```powershell
+Invoke-RestMethod http://localhost:8080/api/v1/health/live
+Invoke-RestMethod http://localhost:8080/api/v1/health/ready
+docker compose ps
+```
+
+Run component gates from their workspace READMEs. Continue sequential implementation with `docs/codex/02-auth-rooms.md` only after Phase 01 verification passes.
 
 ## Architecture and data model
 
@@ -60,7 +67,7 @@ Passwords use Argon2; JWT/API secrets remain in environment variables and sensit
 
 ## Known limitations
 
-This bootstrap contains documentation and infrastructure boundaries only. Application dependencies, source code, migrations, UI, tests, CI, and production Nginx configuration are delivered by phases 01–08.
+Phase 01 intentionally contains no users, rooms, bookings, authentication, availability, seed data, or DeepSeek integration. The baseline migration creates only Alembic's revision table. CI workflows and product functionality arrive in later phases.
 
 ## Future improvements
 

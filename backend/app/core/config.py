@@ -58,7 +58,9 @@ class Settings(BaseSettings):
             return self
         if "change-me" in self.database_url:
             raise ValueError("Production DATABASE_URL must not contain placeholder credentials")
-        if self.jwt_secret is not None and "change-me" in self.jwt_secret.get_secret_value():
+        if self.jwt_secret is None or not self.jwt_secret.get_secret_value().strip():
+            raise ValueError("Production JWT_SECRET is required")
+        if "change-me" in self.jwt_secret.get_secret_value():
             raise ValueError("Production JWT_SECRET must not contain a placeholder")
         return self
 

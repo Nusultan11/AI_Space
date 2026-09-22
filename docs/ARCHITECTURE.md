@@ -80,7 +80,7 @@ Receives only user text, local current time, timezone, and the active room catal
 
 ## API and errors
 
-FastAPI exposes `/api/v1` endpoints listed in `docs/TASK.md`. JWT Bearer dependencies provide the current user. Responses use one error shape, for example `{"error":{"code":"booking_conflict","message":"…","details":{…},"request_id":"…"}}`; exact fields are finalized in phase 01 and then remain consistent.
+FastAPI exposes `/api/v1` endpoints listed in `docs/TASK.md`. JWT Bearer dependencies provide the current user. Application errors and FastAPI/Pydantic request-validation failures use one error shape, for example `{"error":{"code":"booking_conflict","message":"…","details":{…},"request_id":"…"}}`. Validation details expose only safe field location, message, and type metadata; raw submitted values are never echoed.
 
 Schedules expose occupied start/end instants without other users' titles or identities. Booking conflicts use one typed details shape containing `alternative_rooms` and `alternative_slots`; one list is populated according to the room-first priority. The database-race path rolls back the failed transaction before querying these alternatives.
 
@@ -104,6 +104,7 @@ Docker Compose will orchestrate PostgreSQL health, one-shot migrations, one-shot
 - Mocked/fake DeepSeek contract and failure tests in normal CI.
 - Frontend component tests for state and validation; Playwright for the two critical user journeys.
 - CI checks format, lint, types, tests, builds, migrations, Docker images, and E2E where practical.
+- GitHub Actions separates backend, frontend, and clean Compose runtime/E2E gates. The runtime gate starts from removed volumes, verifies public health routes and one-shot services, replays migrations and seed data, proves the three demo rooms remain unique, runs without a DeepSeek key, prints diagnostics on failure, and always removes its volumes.
 
 ## Observability and security
 

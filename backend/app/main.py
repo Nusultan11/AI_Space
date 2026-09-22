@@ -5,15 +5,18 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from functools import partial
+from typing import cast
 
 import structlog
 from fastapi import FastAPI, Request, Response
+from fastapi.exceptions import RequestValidationError
 from sqlalchemy.ext.asyncio import AsyncEngine
+from starlette.types import ExceptionHandler
 
 from app.api.health import router as health_router
 from app.api.v1.router import router as api_v1_router
 from app.core.config import Settings, get_settings
-from app.core.errors import AppError, app_error_handler
+from app.core.errors import AppError, app_error_handler, request_validation_error_handler
 from app.core.logging import configure_logging
 from app.core.request_id import (
     REQUEST_ID_HEADER,
@@ -42,6 +45,10 @@ def create_app(settings: Settings | None = None, engine: AsyncEngine | None = No
     application.state.session_factory = create_session_factory(database_engine)
     application.state.database_healthcheck = partial(check_database, database_engine)
     application.add_exception_handler(AppError, app_error_handler)  # type: ignore[arg-type]
+    application.add_exception_handler(
+        RequestValidationError,
+        cast(ExceptionHandler, request_validation_error_handler),
+    )
 
     @application.middleware("http")
     async def request_context(request: Request, call_next) -> Response:  # type: ignore[no-untyped-def]

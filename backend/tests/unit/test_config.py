@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import pytest
-from pydantic import ValidationError
+from pydantic import SecretStr, ValidationError
 
 from app.core.config import Settings
 
@@ -34,4 +34,19 @@ def test_production_rejects_placeholder_database_credentials() -> None:
             database_url=(
                 "postgresql+asyncpg://aispace:change-me-local-only@postgres:5432/aispace"
             ),
+            jwt_secret=SecretStr("production-only-test-secret"),
+        )
+
+
+def test_production_requires_jwt_secret() -> None:
+    with pytest.raises(ValidationError, match="JWT_SECRET is required"):
+        Settings(app_env="production", database_url=DATABASE_URL, jwt_secret=None)
+
+
+def test_production_rejects_placeholder_jwt_secret() -> None:
+    with pytest.raises(ValidationError, match="JWT_SECRET must not contain a placeholder"):
+        Settings(
+            app_env="production",
+            database_url=DATABASE_URL,
+            jwt_secret=SecretStr("change-me-use-a-long-random-value"),
         )

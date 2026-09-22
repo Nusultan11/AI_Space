@@ -1,13 +1,15 @@
 from __future__ import annotations
 
+import json
 from uuid import UUID
 
 import pytest
+import structlog
 from httpx2 import ASGITransport, AsyncClient
 
 from app.core.config import Settings
-from app.core.logging import REDACTED, redact_sensitive
-from app.core.request_id import REQUEST_ID_HEADER
+from app.core.logging import REDACTED, configure_logging, redact_sensitive
+from app.core.request_id import REQUEST_ID_HEADER, reset_request_id, set_request_id
 from app.main import create_app
 
 
@@ -26,6 +28,43 @@ def test_logging_redacts_sensitive_values_recursively() -> None:
     assert redacted["password"] == REDACTED
     assert redacted["headers"] == {"Authorization": REDACTED, "x-safe": "visible"}
     assert redacted["payload"] == [{"api-key": REDACTED}, {"meeting_content": REDACTED}]
+
+
+def test_rendered_log_contains_request_id_and_no_sensitive_values(capsys) -> None:
+    configure_logging("INFO")
+    token = set_request_id("log-review-123")
+    try:
+        structlog.get_logger("test").info(
+            "security_review",
+            nested={
+                "password": "raw-password-value",
+                "token": "raw-token-value",
+                "Authorization": "Bearer raw-authorization-value",
+                "api_key": "raw-api-key-value",
+                "meeting_content": "private-meeting-value",
+            },
+        )
+    finally:
+        reset_request_id(token)
+
+    rendered = capsys.readouterr().out
+    event = json.loads(rendered.strip())
+    assert event["request_id"] == "log-review-123"
+    assert event["nested"] == {
+        "password": REDACTED,
+        "token": REDACTED,
+        "Authorization": REDACTED,
+        "api_key": REDACTED,
+        "meeting_content": REDACTED,
+    }
+    for sensitive_value in (
+        "raw-password-value",
+        "raw-token-value",
+        "raw-authorization-value",
+        "raw-api-key-value",
+        "private-meeting-value",
+    ):
+        assert sensitive_value not in rendered
 
 
 @pytest.mark.asyncio

@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 
 async function register(page: Page, suffix: string) {
   await page.goto("/");
@@ -10,25 +10,50 @@ async function register(page: Page, suffix: string) {
   await expect(page.getByRole("tab", { name: "Rooms" })).toBeVisible();
 }
 
-function futureDate(days: number): string {
-  const value = new Date();
-  value.setUTCDate(value.getUTCDate() + days);
-  return value.toISOString().slice(0, 10);
+interface FreeIntentInterval {
+  room: { id: string; name: string };
+  startAt: string;
+  endAt: string;
+}
+
+async function findFreeInterval(
+  request: APIRequestContext,
+  token: string,
+): Promise<FreeIntentInterval> {
+  for (let offset = 60; offset < 140; offset += 1) {
+    const start = new Date();
+    start.setUTCDate(start.getUTCDate() + offset);
+    start.setUTCHours(6 + (offset % 8), 0, 0, 0);
+    const end = new Date(start.getTime() + 60 * 60 * 1000);
+    const availability = await request.get(
+      `/api/v1/availability?start_at=${encodeURIComponent(start.toISOString())}&end_at=${encodeURIComponent(end.toISOString())}`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+    expect(availability.ok()).toBe(true);
+    const body = (await availability.json()) as {
+      rooms: Array<{ room_id: string; name: string }>;
+    };
+    const room = body.rooms[0];
+    if (room) {
+      return {
+        room: { id: room.room_id, name: room.name },
+        startAt: start.toISOString(),
+        endAt: end.toISOString(),
+      };
+    }
+  }
+  throw new Error("No free future interval was found");
 }
 
 test("AI preview confirms through the real normal booking endpoint", async ({ page, request }) => {
   const suffix = Date.now().toString();
   await register(page, suffix);
   const token = await page.evaluate(() => sessionStorage.getItem("aispace.access-token"));
-  expect(token).toBeTruthy();
-  const roomsResponse = await request.get("/api/v1/rooms", {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  expect(roomsResponse.ok()).toBe(true);
-  const rooms = (await roomsResponse.json()) as Array<{ id: string; name: string }>;
-  const room = rooms[0];
-  const date = futureDate(50 + (Date.now() % 20));
+  if (!token) throw new Error("Authentication token was not stored");
+  const interval = await findFreeInterval(request, token);
+  const room = interval.room;
   const title = `AI journey ${suffix}`;
+  const editedTitle = `Edited AI journey ${suffix}`;
 
   await page.route("**/api/v1/ai/booking-intent", async (route) => {
     expect(route.request().method()).toBe("POST");
@@ -38,8 +63,8 @@ test("AI preview confirms through the real normal booking endpoint", async ({ pa
       body: JSON.stringify({
         room_id: room.id,
         room_reference: room.name,
-        start_at: `${date}T10:00:00Z`,
-        end_at: `${date}T11:00:00Z`,
+        start_at: interval.startAt,
+        end_at: interval.endAt,
         title,
         participants_count: 2,
         needs_clarification: false,
@@ -54,6 +79,7 @@ test("AI preview confirms through the real normal booking endpoint", async ({ pa
   await page.getByRole("button", { name: "Prepare preview" }).click();
   await expect(page.getByRole("heading", { name: "Review AI preview" })).toBeVisible();
   await expect(page.getByLabel("Meeting title")).toHaveValue(title);
+  await page.getByLabel("Meeting title").fill(editedTitle);
 
   const bookingResponse = page.waitForResponse(
     (response) =>
@@ -63,9 +89,12 @@ test("AI preview confirms through the real normal booking endpoint", async ({ pa
   await page.getByRole("button", { name: "Confirm booking" }).click();
   const persisted = await bookingResponse;
   expect(persisted.status()).toBe(201);
-  expect(persisted.request().postDataJSON()).toMatchObject({ title, room_id: room.id });
+  expect(persisted.request().postDataJSON()).toMatchObject({
+    title: editedTitle,
+    room_id: room.id,
+  });
   await expect(page.getByText("Booking confirmed.")).toBeVisible();
 
   await page.getByRole("tab", { name: "My bookings" }).click();
-  await expect(page.getByRole("heading", { name: title })).toBeVisible();
+  await expect(page.getByRole("heading", { name: editedTitle })).toBeVisible();
 });

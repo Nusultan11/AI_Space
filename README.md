@@ -1,76 +1,140 @@
 # AiSpace
 
-AiSpace is a production-minded meeting-room booking application. Phase 06 delivers the complete browser workflow for authentication, room schedules, manual and AI-assisted booking, conflict alternatives, personal bookings, and cancellation.
+AiSpace is a single-deployment meeting-room booking application. It supports authenticated manual booking, deterministic availability search, and an optional DeepSeek-assisted flow that converts natural language into a reviewable booking draft. PostgreSQL remains the source of truth for every confirmed booking.
 
-## Problem
+## Product outcome
 
-Employees need to arrange meetings reliably through either a normal form or natural-language input, without double-booking rooms.
+- Register and sign in with email and password.
+- Browse rooms, schedules, availability, and personal bookings.
+- Create and cancel bookings through one shared backend service.
+- Prevent overlapping confirmed bookings at the PostgreSQL constraint layer.
+- Turn natural-language requests into validated booking previews without allowing the LLM to write data.
+- Keep manual booking fully operational when DeepSeek is unavailable.
 
-## Product goals
+## Stack
 
-- Correct manual booking, availability, cancellation, and useful conflict alternatives.
-- Natural-language intent extraction with preview and explicit user confirmation.
-- Database-enforced booking integrity, clear failure behavior, and a simple reviewable design.
+- Backend: Python 3.12, FastAPI, Pydantic v2, SQLAlchemy 2, asyncpg, Alembic, PostgreSQL, PyJWT, Argon2, pytest, Ruff, and Pyright.
+- Frontend: React, TypeScript, Vite, MUI, TanStack Query, React Hook Form, Zod, and Vitest.
+- Runtime: Docker Compose and Nginx, with one public origin at `http://localhost:8080`.
+- Browser tests: Playwright.
 
-## Planned features
+## Clean startup
 
-Authentication, room schedules, manual and AI-assisted booking, booking previews, availability suggestions, cancellation history, health endpoints, and browser-level user flows.
+Docker Desktop must be running with the Linux engine available.
 
-## Tech stack
-
-FastAPI, Pydantic v2, SQLAlchemy 2, PostgreSQL, Alembic, React, TypeScript, Vite, MUI, TanStack Query, React Hook Form, Zod, Playwright, Docker Compose, Nginx, and DeepSeek.
-
-## Quick start
-
-With Docker Desktop running:
-
-```powershell
-Copy-Item .env.example .env
-docker compose up --build
+```bash
+docker compose down -v --remove-orphans
+docker compose up --build -d
+docker compose ps -a
 ```
 
-Open `http://localhost:8080`. Nginx serves the React shell and proxies `/api` to FastAPI. The stack waits for PostgreSQL health, applies Alembic migrations once, then starts the backend and frontend.
+Open [http://localhost:8080](http://localhost:8080). The public health endpoints are:
 
-Useful checks:
+- `http://localhost:8080/api/v1/health/live`
+- `http://localhost:8080/api/v1/health/ready`
 
-```powershell
-Invoke-RestMethod http://localhost:8080/api/v1/health/live
-Invoke-RestMethod http://localhost:8080/api/v1/health/ready
-docker compose ps
+The migration and seed services should exit successfully; PostgreSQL, backend, and frontend should remain healthy or running. Stop and remove the stack with:
+
+```bash
+docker compose down -v --remove-orphans
 ```
 
-The runtime seeds the three demo rooms idempotently after migrations. Open the browser UI to register or sign in, inspect room schedules, create a manual booking, apply conflict alternatives, review or cancel personal bookings, and prepare an editable AI booking preview. AI confirmation uses the same normal booking endpoint as the manual form. Continue with `docs/codex/07-quality.md` only after Phase 06 verification passes.
+## Configuration
 
-## Architecture and data model
+Copy `.env.example` to `.env` only when local overrides are needed. Never commit `.env` or credentials. Development defaults are provided by Compose; production configuration rejects placeholder database and JWT secrets.
 
-The browser uses the React frontend, which calls `/api/v1` on FastAPI. Domain services persist users, rooms, and bookings through SQLAlchemy to PostgreSQL. See `docs/ARCHITECTURE.md` for boundaries and the planned schema.
+`DEEPSEEK_API_KEY` is optional. With no key, manual booking and all non-AI functionality remain available, while the AI intent endpoint returns its documented unavailable response. Normal tests and CI do not require a live DeepSeek key.
 
-## Booking conflict protection
+## Architecture boundaries
 
-Intervals are half-open (`[start, end)`). A PostgreSQL GiST exclusion constraint is the final guard against overlapping confirmed bookings in the same room, including concurrent requests.
+- The FastAPI application is one deployable backend; PostgreSQL owns persistent state.
+- `BookingService` is the only booking mutation path. Both manual and AI-assisted confirmation use `POST /api/v1/bookings`.
+- DeepSeek only produces an untrusted `BookingIntent`. Pydantic and business validation run before any preview can be confirmed.
+- The frontend uses TanStack Query for server state. Authentication state is stored in `sessionStorage`; it is not persisted indefinitely.
+- Nginx serves the SPA and proxies `/api/` to the backend under the same origin.
 
-Conflict responses first suggest up to three active, sufficiently large rooms free at the requested time. If none qualify, they provide up to three exact-duration slots for the requested room, searched forward in 15-minute increments for at most seven days. Room schedules represent one local calendar day and expose only occupied start/end times.
+## Data, time, availability, and conflicts
 
-## Natural-language booking and AI reliability
+The core data model contains users, rooms, room schedules, and bookings. Booking timestamps are stored as timezone-aware `TIMESTAMPTZ` values. Intervals use half-open semantics, `[start, end)`, so one booking may start exactly when another ends. The office timezone defaults to `Asia/Almaty` and is configurable.
 
-DeepSeek may only produce a validated `BookingIntent` preview. It cannot check availability or write to the database. Missing or ambiguous critical values produce a clarification preview; valid results remain editable and confirmation uses the same `POST /bookings` path as manual entry. Configure `DEEPSEEK_API_KEY`, `DEEPSEEK_BASE_URL`, `DEEPSEEK_MODEL`, and `DEEPSEEK_TIMEOUT_SECONDS` for live parsing. Missing configuration or provider failure affects only the AI panel, not readiness or manual booking. The AI Playwright journey mocks only the parser endpoint; its confirmed booking still uses the real backend and PostgreSQL.
+Availability is computed deterministically from room schedules and existing confirmed bookings. PostgreSQL is the final concurrency authority: a `btree_gist` exclusion constraint prevents two confirmed bookings for one room from overlapping, including concurrent requests. Conflict responses first suggest active rooms with enough capacity that are free for the requested interval; when none qualify, they suggest exact-duration slots for the requested room within the bounded search window. These alternatives are advisory—the database constraint still decides whether the retried booking succeeds.
 
-## Timezone strategy
+## DeepSeek trust boundary
 
-The office timezone is configurable and defaults to `Asia/Almaty`. API boundaries require timezone-aware datetimes and PostgreSQL stores booking times as `TIMESTAMPTZ`.
+The AI endpoint accepts natural language, asks DeepSeek for structured intent, validates the response, and returns either a preview or a clarification/error. DeepSeek does not calculate availability, authorize users, or write bookings. Provider timeouts, malformed output, unavailable credentials, and unsafe values are isolated from manual booking. Live provider behavior is not claimed by the automated suite because CI uses deterministic mocks and no API key.
 
-## Security and testing
+## Browser flows and accessibility
 
-Passwords use Argon2; JWT/API secrets remain in environment variables and sensitive values are excluded from logs. Critical tests use real PostgreSQL and cover authorization, time boundaries, concurrency, DeepSeek failures, and the two primary Playwright flows.
+The SPA provides sign-in/registration, room and availability views, manual booking, AI-assisted preview, booking history, and cancellation. Forms use labeled controls, keyboard-operable MUI components, visible validation feedback, and status/error messaging. Browser tests exercise the public Nginx route and real booking APIs; only the DeepSeek intent call is mocked in the AI flow.
 
-## Assumptions, decisions, and trade-offs
+## API surface
 
-`docs/DECISIONS.md` separates confirmed decisions from open product questions. The main trade-off is deliberate simplicity: one application and explicit services instead of infrastructure or framework layers without demonstrated need.
+The versioned API under `/api/v1` includes:
 
-## Known limitations
+- `/auth/register`, `/auth/login`, and `/users/me`
+- `/rooms` and room schedule endpoints
+- `/availability`
+- `/bookings` and booking cancellation
+- `/ai/booking-intent`
+- `/health/live` and `/health/ready`
 
-Phase 06 has no recurring meetings, notifications, or business-hours policy. Live DeepSeek connectivity is configuration-dependent and is not required for normal verification. Authentication uses short-lived access tokens stored only in browser session storage; refresh tokens, OAuth, SSO, and RBAC are out of scope.
+Application errors and FastAPI/Pydantic validation failures use the same envelope with a stable code, safe message, request ID, and optional details. Validation details expose only field location, message, and type; submitted secret or private values are not echoed.
 
-## Future improvements
+## Security and observability
 
-Only after the required system is correct: measure booking success, conflicts, AI clarification/conversion, cancellation, and room utilization. Do not build an analytics platform for this assignment.
+- Passwords are hashed with Argon2; secrets and tokens come from environment variables.
+- Request IDs are accepted or generated, returned in response headers, and attached to structured JSON logs.
+- Sensitive log fields such as passwords, tokens, authorization headers, API keys, and meeting content are redacted recursively.
+- Repository and Docker ignore rules exclude credentials, caches, build output, reports, and local runtime data.
+
+## Local quality commands
+
+Backend:
+
+```bash
+cd backend
+uv lock --check
+uv sync --frozen
+uv run ruff format --check .
+uv run ruff check .
+uv run pyright
+uv run pytest
+uv build
+```
+
+Frontend:
+
+```bash
+cd frontend
+npm ci
+npm run lint
+npm run typecheck
+npm test -- --run
+npm run build
+```
+
+Runtime and E2E:
+
+```bash
+docker compose config
+docker compose down -v --remove-orphans
+docker compose up --build -d
+cd e2e
+npm ci
+npx playwright test
+```
+
+PostgreSQL-dependent backend tests use Testcontainers and require a working Docker daemon. They never substitute SQLite.
+
+## Test strategy and CI
+
+Unit tests cover domain and trust-boundary behavior, integration tests exercise real PostgreSQL, frontend tests cover components and client behavior, and Playwright covers complete public-stack journeys. Important coverage includes interval boundaries, authorization, rollback, external-provider failures, cancellation, and the concurrent double-booking race.
+
+GitHub Actions runs three gates: the complete backend quality suite, the complete frontend quality suite, and a clean Compose runtime plus Playwright gate. The runtime gate verifies migrations, health routes, idempotent seed replay, and exactly three demo rooms without a DeepSeek key. Failed runtime jobs retain diagnostic logs in the job output and always remove the Compose volumes.
+
+## Assumptions, tradeoffs, and limitations
+
+- Room schedules are explicit weekly office-hours records; recurring meetings are outside the current scope.
+- AI suggestions require manual review and confirmation; live DeepSeek connectivity is deployment-specific and is not verified in CI.
+- The frontend production build currently emits Vite's informational large-chunk warning (approximately 632 kB); the build still succeeds and bundle splitting is deferred because it is not a Phase 07 correctness failure.
+- The repository intentionally avoids microservices, queues, Redis, Kubernetes, LangChain, and other infrastructure without a concrete requirement.

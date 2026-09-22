@@ -1,5 +1,11 @@
 .venv
+.env
+.env.*
+.git
+*.pem
+*.key
 __pycache__
+*.py[cod]
 .pytest_cache
 .ruff_cache
 .pyright
@@ -7,3 +13,9 @@ build
 dist
 *.egg-info
 tests
+coverage
+htmlcov
+.coverage
+*.log
+data
+artifacts

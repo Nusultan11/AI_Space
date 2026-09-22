@@ -1,0 +1,34 @@
+# Repository metadata and local configuration
+.git
+.github
+.env
+.env.*
+*.pem
+*.key
+
+# Dependency and generated output
+**/node_modules
+frontend/dist
+backend/.venv
+backend/dist
+backend/build
+**/__pycache__
+**/*.py[cod]
+**/.pytest_cache
+**/.ruff_cache
+**/.pyright
+**/*.egg-info
+
+# Test/browser artifacts and coverage
+playwright-report
+test-results
+blob-report
+coverage
+htmlcov
+.coverage
+
+# Local runtime data and logs
+*.log
+data
+artifacts
+postgres-data

@@ -15,6 +15,15 @@ def test_settings_use_foundation_defaults() -> None:
     assert settings.app_port == 8000
     assert settings.app_log_level == "INFO"
     assert settings.office_timezone == "Asia/Almaty"
+    assert settings.deepseek_model == "deepseek-flash"
+
+
+def test_settings_allow_deepseek_model_environment_override(monkeypatch) -> None:
+    monkeypatch.setenv("DEEPSEEK_MODEL", "provider-model-override")
+
+    settings = Settings(database_url=DATABASE_URL)
+
+    assert settings.deepseek_model == "provider-model-override"
 
 
 def test_settings_require_async_postgresql_url() -> None:

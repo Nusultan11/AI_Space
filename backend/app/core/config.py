@@ -33,7 +33,7 @@ class Settings(BaseSettings):
 
     deepseek_api_key: SecretStr | None = None
     deepseek_base_url: str = "https://api.deepseek.com"
-    deepseek_model: str = "deepseek-chat"
+    deepseek_model: str = "deepseek-flash"
     deepseek_timeout_seconds: float = 15.0
 
     @field_validator("database_url")

@@ -76,7 +76,7 @@ Queries schedules and free rooms using `[start, end)` rules and supplies determi
 
 ### `BookingIntentParser`
 
-Receives text, local current time, timezone, and the current room catalog. `DeepSeekBookingIntentParser` calls the external API; `FakeBookingIntentParser` makes tests deterministic. Both return the same validated `BookingIntent` contract. Parser output is a preview and has no persistence capability.
+Receives only user text, local current time, timezone, and the active room catalog. `DeepSeekBookingIntentParser` requests JSON through the OpenAI-compatible SDK; `FakeBookingIntentParser` makes tests deterministic. Provider content is checked for emptiness, decoded, Pydantic-validated, and then independently checked against the exact catalog, timezone, interval, past-time, and capacity rules by `AIBookingService`. Parser output is a preview and neither parser has persistence capability.
 
 ## API and errors
 
@@ -88,7 +88,9 @@ Liveness does not depend on PostgreSQL or DeepSeek. Readiness checks PostgreSQL 
 
 ## AI trust boundary
 
-DeepSeek receives only the minimum context needed. Its structured JSON is parsed, schema-validated, cross-checked against the supplied room catalog, and business-validated. Ambiguous or missing critical input returns clarification. The frontend shows a preview and confirmation calls the same normal booking endpoint as the manual form.
+DeepSeek receives only the minimum context needed. Its structured JSON is parsed, schema-validated, cross-checked against the supplied room catalog, and business-validated. Ambiguous or missing room, start, end/duration, or title returns a normalized clarification preview instead of invented values. The flow is text → parser → validated preview → explicit user confirmation → normal `POST /bookings`; the AI endpoint never checks availability or writes data.
+
+Timeouts map to `ai_timeout`/504; missing configuration, connection failures, rate limits, and provider failures map to `ai_unavailable`/503; empty, malformed, schema-invalid, or impossible output maps to `ai_invalid_response`/502. Provider details and raw content are not returned or logged. DeepSeek remains outside readiness, and normal CI uses fakes/mocks rather than a live API.
 
 ## Runtime
 

@@ -71,3 +71,11 @@ Authenticated users may list and retrieve active rooms. A missing or inactive ro
 A room schedule covers exactly one local calendar day selected by its `date` parameter in `OFFICE_TIMEZONE`, using `[day_start, next_day_start)` overlap semantics. Nearest-slot search moves forward from the requested start in 15-minute increments for at most seven days, preserves the requested duration exactly, and returns at most three choices. Conflict alternatives first return up to three active rooms free at the requested time, ordered by capacity, name, and ID; only when none qualify do they return nearest slots for the requested room.
 
 Known participant counts set the alternative room's minimum capacity. When count is omitted, alternatives must be at least as large as the requested room. Over-capacity create requests remain validation errors. Schedule, room, alternative, and slot-search results are bounded, so Phase 04 adds no pagination. No business-hours restriction is inferred.
+
+## ADR-011: Phase 05 AI preview and provider failures
+
+**Status:** Accepted
+
+Use the OpenAI Python SDK with DeepSeek's compatible base URL, a configured timeout, JSON mode, and no SDK retries. The parser receives only user text, current office-local time, timezone, and active room IDs/names/capacities. It returns an untrusted `BookingIntent`; `AIBookingService` performs catalog and domain validation and normalizes genuinely missing critical values to clarification. It never checks availability or invokes `BookingService`.
+
+Map timeouts to `ai_timeout`/504, unavailable configuration and provider failures (including 429/5xx) to `ai_unavailable`/503, and invalid provider output to `ai_invalid_response`/502. DeepSeek configuration is supplied only to the backend container. Missing configuration disables only the AI endpoint; readiness and manual booking remain healthy. Normal tests use fakes or mocked SDK responses and make no live DeepSeek calls.

@@ -72,7 +72,7 @@ The only booking mutation path for both manual and AI-confirmed flows. It valida
 
 ### `AvailabilityService`
 
-Queries schedules and free rooms using `[start, end)` rules and supplies alternative rooms and nearest slots. It does not create bookings.
+Queries schedules and free rooms using `[start, end)` rules and supplies deterministic conflict alternatives. A schedule is one `OFFICE_TIMEZONE` calendar day. Free rooms use one correlated `NOT EXISTS` query; confirmed bookings for nearest-slot search are loaded once for a bounded seven-day window and scanned in memory at 15-minute increments. Alternatives prefer up to three best-fit rooms at the requested time, then up to three exact-duration slots for the requested room. The service does not mutate bookings or commit transactions.
 
 ### `BookingIntentParser`
 
@@ -81,6 +81,8 @@ Receives text, local current time, timezone, and the current room catalog. `Deep
 ## API and errors
 
 FastAPI exposes `/api/v1` endpoints listed in `docs/TASK.md`. JWT Bearer dependencies provide the current user. Responses use one error shape, for example `{"error":{"code":"booking_conflict","message":"…","details":{…},"request_id":"…"}}`; exact fields are finalized in phase 01 and then remain consistent.
+
+Schedules expose occupied start/end instants without other users' titles or identities. Booking conflicts use one typed details shape containing `alternative_rooms` and `alternative_slots`; one list is populated according to the room-first priority. The database-race path rolls back the failed transaction before querying these alternatives.
 
 Liveness does not depend on PostgreSQL or DeepSeek. Readiness checks PostgreSQL and other required local dependencies; DeepSeek is optional because manual booking must remain healthy.
 

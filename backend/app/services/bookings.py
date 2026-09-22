@@ -15,6 +15,8 @@ from app.models.room import Room
 from app.models.user import User
 from app.repositories.bookings import BookingsRepository
 from app.repositories.rooms import RoomsRepository
+from app.schemas.availability import BookingConflictDetails
+from app.services.availability import AvailabilityService, validate_interval
 
 BOOKING_OVERLAP_CONSTRAINT = "excl_bookings_room_time_confirmed"
 
@@ -29,6 +31,7 @@ class BookingService:
         self.session = session
         self.bookings = BookingsRepository(session)
         self.rooms = RoomsRepository(session)
+        self.availability = AvailabilityService(session)
         self.clock = clock or (lambda: datetime.now(UTC))
 
     async def create(
@@ -56,7 +59,13 @@ class BookingService:
             start_at=start_at,
             end_at=end_at,
         ):
-            raise booking_conflict()
+            details = await self.availability.conflict_details(
+                room_id=room_id,
+                start_at=start_at,
+                end_at=end_at,
+                participants_count=participants_count,
+            )
+            raise booking_conflict(details)
 
         try:
             booking = await self.bookings.add(
@@ -74,7 +83,13 @@ class BookingService:
             constraint_name = integrity_constraint_name(exc)
             await self.session.rollback()
             if constraint_name == BOOKING_OVERLAP_CONSTRAINT:
-                raise booking_conflict() from None
+                details = await self.availability.conflict_details(
+                    room_id=room_id,
+                    start_at=start_at,
+                    end_at=end_at,
+                    participants_count=participants_count,
+                )
+                raise booking_conflict(details) from None
             raise
 
     async def list_for_user(self, user: User) -> list[Booking]:
@@ -104,18 +119,7 @@ def validate_booking_request(
     participants_count: int | None,
     now: datetime,
 ) -> None:
-    if not is_timezone_aware(start_at) or not is_timezone_aware(end_at):
-        raise AppError(
-            status_code=422,
-            code="timezone_required",
-            message="Booking start and end must include a timezone offset.",
-        )
-    if end_at <= start_at:
-        raise AppError(
-            status_code=422,
-            code="invalid_booking_interval",
-            message="Booking end must be after its start.",
-        )
+    validate_interval(start_at=start_at, end_at=end_at)
     if start_at < now:
         raise AppError(
             status_code=422,
@@ -135,10 +139,6 @@ def validate_booking_request(
             message="Participant count exceeds room capacity.",
             details={"room_capacity": room.capacity},
         )
-
-
-def is_timezone_aware(value: datetime) -> bool:
-    return value.tzinfo is not None and value.utcoffset() is not None
 
 
 def integrity_constraint_name(exc: IntegrityError) -> str | None:
@@ -167,11 +167,12 @@ def booking_not_found() -> AppError:
     return AppError(status_code=404, code="booking_not_found", message="Booking was not found.")
 
 
-def booking_conflict() -> AppError:
+def booking_conflict(details: BookingConflictDetails) -> AppError:
     return AppError(
         status_code=409,
         code="booking_conflict",
         message="The room is already booked for this time.",
+        details=details.model_dump(mode="json"),
     )
 
 

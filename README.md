@@ -1,6 +1,6 @@
 # AiSpace
 
-AiSpace is a production-minded meeting-room booking test project. Phase 02 provides authentication, current-user identity, and an authenticated read-only room catalog on the runnable foundation.
+AiSpace is a production-minded meeting-room booking test project. Phase 04 provides authentication, concurrency-safe manual booking and cancellation, deterministic room schedules, free-room search, and conflict alternatives on the runnable foundation.
 
 ## Problem
 
@@ -39,7 +39,7 @@ Invoke-RestMethod http://localhost:8080/api/v1/health/ready
 docker compose ps
 ```
 
-The runtime seeds the three demo rooms idempotently after migrations. Register at `POST /api/v1/auth/register`, obtain a Bearer token from `POST /api/v1/auth/login`, then use `/api/v1/users/me` and `/api/v1/rooms`. Continue with `docs/codex/03-booking-core.md` only after Phase 02 verification passes.
+The runtime seeds the three demo rooms idempotently after migrations. Register at `POST /api/v1/auth/register`, obtain a Bearer token from `POST /api/v1/auth/login`, then use `/api/v1/users/me`, `/api/v1/rooms`, `/api/v1/bookings`, `/api/v1/rooms/{id}/schedule?date=YYYY-MM-DD`, and `/api/v1/availability?start_at=...&end_at=...`. Continue with `docs/codex/05-deepseek.md` only after Phase 04 verification passes.
 
 ## Architecture and data model
 
@@ -48,6 +48,8 @@ The browser uses the React frontend, which calls `/api/v1` on FastAPI. Domain se
 ## Booking conflict protection
 
 Intervals are half-open (`[start, end)`). A PostgreSQL GiST exclusion constraint is the final guard against overlapping confirmed bookings in the same room, including concurrent requests.
+
+Conflict responses first suggest up to three active, sufficiently large rooms free at the requested time. If none qualify, they provide up to three exact-duration slots for the requested room, searched forward in 15-minute increments for at most seven days. Room schedules represent one local calendar day and expose only occupied start/end times.
 
 ## Natural-language booking and AI reliability
 
@@ -67,7 +69,7 @@ Passwords use Argon2; JWT/API secrets remain in environment variables and sensit
 
 ## Known limitations
 
-Phase 02 intentionally contains no bookings, availability, cancellation, booking UI, or DeepSeek integration. Authentication uses short-lived access tokens only; refresh tokens, OAuth, SSO, and RBAC are out of scope.
+Phase 04 has no booking frontend, natural-language parser, recurring meetings, notifications, business-hours policy, or DeepSeek integration. Authentication uses short-lived access tokens only; refresh tokens, OAuth, SSO, and RBAC are out of scope.
 
 ## Future improvements
 

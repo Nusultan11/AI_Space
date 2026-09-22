@@ -48,10 +48,8 @@ The backend accepts a bounded safe `X-Request-ID` or generates a UUID, returns i
 
 The original assignment does not define these values. Do not silently choose product behavior without recording the choice and rationale:
 
-- Participant-capacity behavior when participant count is omitted, and whether over-capacity is an error or alternative-search trigger.
 - Default duration when natural language provides a start but no end/duration; missing critical values must never be invented.
-- Search horizon and granularity for “nearest free slot.”
-- Default schedule window, pagination shape, and booking-list ordering.
+- Booking-list ordering.
 - Production deployment/TLS details; the assignment requires local Docker Compose and Nginx, not cloud deployment.
 
 ## ADR-008: Phase 02 authentication policy
@@ -65,3 +63,11 @@ Issue signed Bearer access tokens for 30 minutes with `sub`, `iat`, and `exp` cl
 **Status:** Accepted
 
 Authenticated users may list and retrieve active rooms. A missing or inactive room returns the same `room_not_found` response. The separate idempotent seed inserts the three assignment rooms without creating duplicates; it does not create schema at runtime.
+
+## ADR-010: Phase 04 availability policy
+
+**Status:** Accepted
+
+A room schedule covers exactly one local calendar day selected by its `date` parameter in `OFFICE_TIMEZONE`, using `[day_start, next_day_start)` overlap semantics. Nearest-slot search moves forward from the requested start in 15-minute increments for at most seven days, preserves the requested duration exactly, and returns at most three choices. Conflict alternatives first return up to three active rooms free at the requested time, ordered by capacity, name, and ID; only when none qualify do they return nearest slots for the requested room.
+
+Known participant counts set the alternative room's minimum capacity. When count is omitted, alternatives must be at least as large as the requested room. Over-capacity create requests remain validation errors. Schedule, room, alternative, and slot-search results are bounded, so Phase 04 adds no pagination. No business-hours restriction is inferred.

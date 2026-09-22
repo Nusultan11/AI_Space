@@ -65,6 +65,25 @@ class BookingsRepository:
         )
         return booking_id is not None
 
+    async def list_confirmed_overlapping(
+        self,
+        *,
+        room_id: UUID,
+        start_at: datetime,
+        end_at: datetime,
+    ) -> list[Booking]:
+        result = await self.session.scalars(
+            select(Booking)
+            .where(
+                Booking.room_id == room_id,
+                Booking.status == BookingStatus.CONFIRMED,
+                Booking.start_at < end_at,
+                Booking.end_at > start_at,
+            )
+            .order_by(Booking.start_at, Booking.end_at, Booking.id)
+        )
+        return list(result)
+
     async def cancel(self, booking: Booking, *, cancelled_at: datetime) -> None:
         booking.status = BookingStatus.CANCELLED
         booking.cancelled_at = cancelled_at

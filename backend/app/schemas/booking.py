@@ -8,7 +8,9 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, StringConstrai
 
 from app.models.booking import BookingStatus
 
-BookingTitle = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+BookingTitle = Annotated[
+    str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)
+]
 
 
 class BookingCreate(BaseModel):

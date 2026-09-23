@@ -49,7 +49,6 @@ The backend accepts a bounded safe `X-Request-ID` or generates a UUID, returns i
 The original assignment does not define these values. Do not silently choose product behavior without recording the choice and rationale:
 
 - Default duration when natural language provides a start but no end/duration; missing critical values must never be invented.
-- Booking-list ordering.
 - Production deployment/TLS details; the assignment requires local Docker Compose and Nginx, not cloud deployment.
 
 ## ADR-008: Phase 02 authentication policy
@@ -93,3 +92,9 @@ Manual input and editable AI previews render the same booking form and execute t
 **Status:** Accepted
 
 The local review stack deliberately reuses one demo PostgreSQL role for migrations, seed, and application runtime. This keeps `docker compose up --build` self-contained and does not claim production least privilege. A production deployment should provision a privileged migration role separately from a restricted runtime role instead of copying the local credentials model.
+
+## ADR-014: Personal booking lists use a stable chronological order
+
+**Status:** Accepted
+
+The backend returns a user's bookings by ascending start instant, breaking equal starts by booking ID. This is deterministic across reads; the browser may apply the same chronological presentation without changing booking state or authorization.

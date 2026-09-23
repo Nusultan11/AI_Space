@@ -49,9 +49,10 @@ export function MyBookings() {
     (left, right) => Date.parse(left.start_at) - Date.parse(right.start_at),
   );
 
-  function state(booking: Booking): "Cancelled" | "Upcoming" | "Past" {
+  function state(booking: Booking): "Cancelled" | "Upcoming" | "In progress" | "Past" {
     if (booking.status === "cancelled") return "Cancelled";
-    return Date.parse(booking.end_at) > now ? "Upcoming" : "Past";
+    if (Date.parse(booking.start_at) > now) return "Upcoming";
+    return Date.parse(booking.end_at) > now ? "In progress" : "Past";
   }
 
   return (

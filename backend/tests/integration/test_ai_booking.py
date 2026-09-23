@@ -4,6 +4,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
 import pytest
 from fastapi import FastAPI
@@ -81,7 +82,7 @@ async def _room(session_factory: async_sessionmaker[AsyncSession]) -> Room:
 
 
 def _valid_intent(room_id: UUID) -> BookingIntent:
-    start_at = datetime.now(UTC) + timedelta(days=1)
+    start_at = datetime.now(ZoneInfo("Asia/Almaty")) + timedelta(days=1)
     return BookingIntent(
         room_id=room_id,
         room_reference="AI room",

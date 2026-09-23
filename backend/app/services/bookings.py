@@ -102,7 +102,11 @@ class BookingService:
         return booking
 
     async def cancel(self, *, booking_id: UUID, user: User) -> Booking:
-        booking = await self.get_for_user(booking_id=booking_id, user=user)
+        booking = await self.bookings.get_for_user_for_update(
+            booking_id=booking_id, user_id=user.id
+        )
+        if booking is None:
+            raise booking_not_found()
         if booking.status == BookingStatus.CANCELLED:
             raise booking_already_cancelled()
         await self.bookings.cancel(booking, cancelled_at=self.clock())

@@ -2,14 +2,16 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
+from zoneinfo import ZoneInfo
 
 import pytest
+from pydantic import ValidationError
 
 from app.core.errors import AppError
 from app.schemas.ai_booking import BookingIntent, RoomContext
 from app.services.ai_booking import validate_booking_intent
 
-NOW = datetime(2030, 1, 1, 9, 0, tzinfo=UTC)
+NOW = datetime(2030, 1, 1, 9, 0, tzinfo=ZoneInfo("Asia/Almaty"))
 ROOM = RoomContext(id=uuid4(), name="Room A", capacity=4)
 
 
@@ -71,6 +73,23 @@ def test_provider_ambiguity_is_preserved_as_clarification() -> None:
 
     assert intent.needs_clarification is True
     assert intent.clarification_message == "What time after lunch?"
+
+
+def test_ai_intent_title_has_same_maximum_as_manual_booking() -> None:
+    _intent(title="a" * 200)
+    with pytest.raises(ValidationError):
+        _intent(title="a" * 201)
+
+
+def test_utc_equivalent_is_rejected_for_office_local_output_contract() -> None:
+    with pytest.raises(AppError) as error:
+        _validate(
+            _intent(
+                start_at=(NOW + timedelta(days=1)).astimezone(UTC),
+                end_at=(NOW + timedelta(days=1, hours=1)).astimezone(UTC),
+            )
+        )
+    assert error.value.code == "ai_invalid_response"
 
 
 @pytest.mark.parametrize(

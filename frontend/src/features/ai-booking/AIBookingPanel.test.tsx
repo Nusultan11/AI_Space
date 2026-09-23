@@ -117,4 +117,37 @@ describe("AIBookingPanel", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Manual booking remains available");
     expect(screen.getByLabelText("Meeting request")).toBeEnabled();
   });
+
+  it("shows room-loading failure for a complete intent", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/rooms")) return jsonResponse({ error: { code: "unavailable", message: "Unavailable" } }, 503);
+      if (url.endsWith("/ai/booking-intent")) return jsonResponse({
+        room_id: room.id, start_at: "2030-01-02T10:00:00+05:00", end_at: "2030-01-02T11:00:00+05:00",
+        title: "Planning", needs_clarification: false, missing_fields: [],
+      });
+      return jsonResponse({ error: { code: "unavailable", message: "Unavailable" } }, 503);
+    }));
+    renderWithProviders(<AIBookingPanel />);
+    fireEvent.change(screen.getByLabelText("Meeting request"), { target: { value: "Plan" } });
+    fireEvent.click(screen.getByRole("button", { name: "Prepare preview" }));
+    expect(await screen.findByText("Could not load rooms for the AI preview.")).toBeVisible();
+  });
+
+  it("shows schedule-loading failure instead of silently withholding the preview", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/rooms")) return jsonResponse([room]);
+      if (url.includes("/schedule")) return jsonResponse({ error: { code: "unavailable", message: "Unavailable" } }, 503);
+      return jsonResponse({
+        room_id: room.id, start_at: "2030-01-02T10:00:00+05:00", end_at: "2030-01-02T11:00:00+05:00",
+        title: "Planning", needs_clarification: false, missing_fields: [],
+      });
+    }));
+    renderWithProviders(<AIBookingPanel />);
+    fireEvent.change(screen.getByLabelText("Meeting request"), { target: { value: "Plan" } });
+    fireEvent.click(screen.getByRole("button", { name: "Prepare preview" }));
+    expect(await screen.findByText("Could not load the AI preview schedule. Try again later.")).toBeVisible();
+    expect(screen.queryByRole("heading", { name: "Review AI preview" })).not.toBeInTheDocument();
+  });
 });

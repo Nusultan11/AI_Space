@@ -89,6 +89,10 @@ async def test_parser_accepts_valid_json_and_sends_only_narrow_context() -> None
     assert completions.request["max_tokens"] == 1024
     assert completions.request["extra_body"] == {"thinking": {"type": "disabled"}}
     assert '"needs_clarification": true' in completions.request["messages"][0]["content"]
+    prompt = completions.request["messages"][0]["content"]
+    assert "relative dates" in prompt
+    assert "office-local wall-clock values" in prompt
+    assert "correct UTC offset for" in prompt
     provider_context = json.loads(completions.request["messages"][1]["content"])
     assert set(provider_context) == {
         "user_text",
@@ -123,6 +127,23 @@ async def test_parser_accepts_clarification_json() -> None:
 
     assert intent.needs_clarification is True
     assert intent.room_id is None
+
+
+@pytest.mark.asyncio
+async def test_parser_rejects_overlong_title() -> None:
+    room, now = _context()
+    content = json.dumps(
+        {
+            "room_id": str(room.id),
+            "start_at": (now + timedelta(days=1)).isoformat(),
+            "end_at": (now + timedelta(days=1, hours=1)).isoformat(),
+            "title": "x" * 201,
+            "needs_clarification": False,
+        }
+    )
+    with pytest.raises(AppError) as error:
+        await _parse(StubCompletions(content=content))
+    assert error.value.code == "ai_invalid_response"
 
 
 @pytest.mark.parametrize(

@@ -94,7 +94,13 @@ export default function App() {
             {tab === 1 && (
               <Paper sx={{ p: { xs: 2, sm: 3 } }}>
                 <Typography component="h2" variant="h5" gutterBottom>Manual booking</Typography>
-                {rooms.data && <BookingForm rooms={rooms.data} />}
+                {rooms.isError ? (
+                  <Alert severity="error">Could not load rooms. Try again later.</Alert>
+                ) : rooms.data ? (
+                  <BookingForm rooms={rooms.data} />
+                ) : (
+                  <Typography role="status">Loading rooms…</Typography>
+                )}
               </Paper>
             )}
             {tab === 2 && <AIBookingPanel />}

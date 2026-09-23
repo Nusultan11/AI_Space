@@ -38,12 +38,21 @@ class BookingsRepository:
         return booking
 
     async def list_for_user(self, user_id: UUID) -> list[Booking]:
-        result = await self.session.scalars(select(Booking).where(Booking.user_id == user_id))
+        result = await self.session.scalars(
+            select(Booking).where(Booking.user_id == user_id).order_by(Booking.start_at, Booking.id)
+        )
         return list(result)
 
     async def get_for_user(self, *, booking_id: UUID, user_id: UUID) -> Booking | None:
         return await self.session.scalar(
             select(Booking).where(Booking.id == booking_id, Booking.user_id == user_id)
+        )
+
+    async def get_for_user_for_update(self, *, booking_id: UUID, user_id: UUID) -> Booking | None:
+        return await self.session.scalar(
+            select(Booking)
+            .where(Booking.id == booking_id, Booking.user_id == user_id)
+            .with_for_update()
         )
 
     async def has_confirmed_overlap(

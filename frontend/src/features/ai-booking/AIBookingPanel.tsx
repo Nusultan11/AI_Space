@@ -80,6 +80,12 @@ export function AIBookingPanel() {
           {intent.clarification_message ?? "Please clarify the booking details."}
         </Alert>
       )}
+      {intent && !intent.needs_clarification && rooms.isError && (
+        <Alert severity="error">Could not load rooms for the AI preview.</Alert>
+      )}
+      {intent && !intent.needs_clarification && previewSchedule.isError && (
+        <Alert severity="error">Could not load the AI preview schedule. Try again later.</Alert>
+      )}
       {intent && !intent.needs_clarification && rooms.data && previewSchedule.data && (
         <Paper sx={{ p: { xs: 2, sm: 3 } }}>
           <Typography component="h2" variant="h5" gutterBottom>Review AI preview</Typography>

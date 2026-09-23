@@ -30,7 +30,7 @@ const bookingSchema = z
     date: z.string().min(1, "Choose a date."),
     start_time: z.string().min(1, "Choose a start time."),
     end_time: z.string().min(1, "Choose an end time."),
-    title: z.string().trim().min(1, "Enter a title."),
+    title: z.string().trim().min(1, "Enter a title.").max(200, "Use 200 characters or fewer."),
     participants_count: z.string().refine(
       (value) =>
         value === "" || (Number.isInteger(Number(value)) && Number(value) >= 1),
@@ -201,6 +201,7 @@ export function BookingForm({
         <TextField
           label="Meeting title"
           {...form.register("title")}
+          slotProps={{ htmlInput: { maxLength: 200 } }}
           error={Boolean(form.formState.errors.title)}
           helperText={form.formState.errors.title?.message}
         />

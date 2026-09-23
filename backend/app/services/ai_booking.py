@@ -70,6 +70,12 @@ def validate_booking_intent(
         raise ai_invalid_response()
     if end_at is not None and not is_timezone_aware(end_at):
         raise ai_invalid_response()
+    office_timezone = current_local_datetime.tzinfo
+    if office_timezone is None or any(
+        value is not None and value.utcoffset() != value.astimezone(office_timezone).utcoffset()
+        for value in (start_at, end_at)
+    ):
+        raise ai_invalid_response()
     if start_at is not None and start_at < current_local_datetime:
         raise ai_invalid_response()
     if start_at is not None and end_at is not None and end_at <= start_at:

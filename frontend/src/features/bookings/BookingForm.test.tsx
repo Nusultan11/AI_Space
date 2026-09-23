@@ -41,6 +41,23 @@ afterEach(() => {
 });
 
 describe("BookingForm", () => {
+  it("rejects titles longer than the backend's 200-character limit", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (!String(input).includes("/schedule") || init?.method === "POST") {
+        throw new Error(`Unexpected request ${input}`);
+      }
+      return jsonResponse(schedule("2030-01-02"));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    renderWithProviders(
+      <BookingForm rooms={[room]} initialValues={{ date: "2030-01-02", title: "x".repeat(201) }} />,
+    );
+    const submit = screen.getByRole("button", { name: "Create booking" });
+    await waitFor(() => expect(submit).toBeEnabled());
+    fireEvent.click(submit);
+    expect(await screen.findByText("Use 200 characters or fewer.")).toBeVisible();
+    expect(fetchMock.mock.calls.filter(([, init]) => init?.method === "POST")).toHaveLength(0);
+  });
   it("normalizes the untouched default date to office-local today", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     const now = new Date("2030-01-01T12:00:00Z");

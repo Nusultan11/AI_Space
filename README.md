@@ -43,6 +43,8 @@ docker compose down -v --remove-orphans
 
 Copy `.env.example` to `.env` only when local overrides are needed. Never commit `.env` or credentials. Development defaults are provided by Compose; production configuration rejects placeholder database and JWT secrets.
 
+For Compose, `PUBLIC_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `OFFICE_TIMEZONE`, JWT settings, and optional DeepSeek settings are the relevant overrides. Compose fixes backend `APP_HOST`/`APP_PORT` and builds `DATABASE_URL` from its PostgreSQL settings; it does not read those three values from `.env`. PostgreSQL is private to the Compose network, with no host port published. For direct backend execution, set `APP_HOST`, `APP_PORT`, and a `DATABASE_URL` pointing to a separately reachable PostgreSQL instance.
+
 `DEEPSEEK_API_KEY` is optional. With no key, manual booking and all non-AI functionality remain available, while the AI intent endpoint returns its documented unavailable response. Normal tests and CI do not require a live DeepSeek key.
 
 Local Compose deliberately uses the same demo PostgreSQL role for migrations and application runtime to keep review startup simple. A production deployment should provision separate migration and least-privilege runtime roles rather than reuse these local credentials.
@@ -64,6 +66,8 @@ Availability and derived schedule views are computed deterministically from acti
 ## DeepSeek trust boundary
 
 The AI endpoint accepts natural language, asks DeepSeek for structured intent, validates the response, and returns either a preview or a clarification/error. DeepSeek does not calculate availability, authorize users, or write bookings. Provider timeouts, malformed output, unavailable credentials, and unsafe values are isolated from manual booking. Live provider behavior is not claimed by the automated suite because CI uses deterministic mocks and no API key.
+
+The natural-language meeting request is sent to the external DeepSeek service. Credentials, JWTs, and unrelated booking history are not intentionally included in the provider request; the parser sends only the request text, current office-local time, timezone, and active room IDs, names, and capacities.
 
 ## Browser flows and accessibility
 
@@ -137,11 +141,12 @@ GitHub Actions runs three gates: the complete backend quality suite, the complet
 ## Assumptions, tradeoffs, and limitations
 
 - There is no weekly office-hours or business-hours model; a business-hours policy is intentionally not implemented. Recurring meetings are outside the current scope.
+- The browser booking form targets same-calendar-day office meetings; the backend interval model is more general.
 - AI suggestions require manual review and confirmation; live DeepSeek connectivity is deployment-specific and is not verified in CI.
 - The frontend production build currently emits Vite's informational large-chunk warning (approximately 632 kB); the build still succeeds and bundle splitting is deferred because it is not a Phase 07 correctness failure.
 - The repository intentionally avoids microservices, queues, Redis, Kubernetes, LangChain, and other infrastructure without a concrete requirement.
 
 ## Future improvements
 
-- Resolve the documented open choices for booking-list ordering and production deployment/TLS when product and target-environment requirements are available.
+- Resolve production deployment/TLS details when product and target-environment requirements are available.
 - Measure real frontend loading performance before deciding whether the current production bundle needs code splitting or other optimization.
